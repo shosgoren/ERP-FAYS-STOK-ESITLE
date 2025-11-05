@@ -1,0 +1,24 @@
+# Bu dosyayı .env olarak kaydedip kendi bilgilerinizle doldurun
+
+# Azure SQL Server Bağlantı Bilgileri
+DB_SERVER=your_server.database.windows.net
+DB_LOGO=GOLD
+DB_FAYS=FaysWMSAkturk
+DB_USER=your_username
+DB_PASSWORD=your_password
+DB_DRIVER=ODBC Driver 17 for SQL Server
+
+# Uygulama Ayarları
+APP_TITLE=LOGO - FAYS WMS Stok Eşitleme
+DEFAULT_WAREHOUSE=MERKEZ
+LOG_LEVEL=INFO
+
+# Notlar:
+# - DB_SERVER: Azure SQL Server adresi (örn: myserver.database.windows.net)
+# - DB_USER: SQL Server kullanıcı adı
+# - DB_PASSWORD: SQL Server şifresi
+# - DB_LOGO: LOGO ERP veritabanı adı (genellikle GOLD)
+# - DB_FAYS: FAYS WMS veritabanı adı (FaysWMSAkturk)
+# - DEFAULT_WAREHOUSE: Varsayılan depo adı
+# - LOG_LEVEL: DEBUG, INFO, WARNING, ERROR
+
