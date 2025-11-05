@@ -26,18 +26,18 @@ jobs:
     
     - name: Build EXE
       run: |
-        pyinstaller --onefile --windowed --name StokEsitleme ^
-          --add-data "config.py;." ^
-          --add-data "database.py;." ^
-          --add-data "stock_sync_engine.py;." ^
-          --add-data "ui_components.py;." ^
-          --hidden-import=customtkinter ^
-          --hidden-import=pyodbc ^
-          --hidden-import=pandas ^
-          --hidden-import=openpyxl ^
-          --hidden-import=PIL ^
-          --hidden-import=dotenv ^
-          --hidden-import=tkcalendar ^
+        pyinstaller --onefile --windowed --name StokEsitleme `
+          --add-data "config.py;." `
+          --add-data "database.py;." `
+          --add-data "stock_sync_engine.py;." `
+          --add-data "ui_components.py;." `
+          --hidden-import=customtkinter `
+          --hidden-import=pyodbc `
+          --hidden-import=pandas `
+          --hidden-import=openpyxl `
+          --hidden-import=PIL `
+          --hidden-import=dotenv `
+          --hidden-import=tkcalendar `
           main.py
     
     - name: Upload EXE
