@@ -31,10 +31,13 @@ class SecureConfig:
     @staticmethod
     def _get_key():
         """Şifreleme anahtarı oluştur"""
+        if not CRYPTOGRAPHY_AVAILABLE:
+            raise ImportError("cryptography kütüphanesi yüklü değil!")
+        
         # Makine bazlı benzersiz anahtar oluştur
         machine_id = os.environ.get('COMPUTERNAME', 'DEFAULT') + os.environ.get('USERNAME', 'USER')
         
-        kdf = PBKDF2(
+        kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
             salt=SecureConfig._SALT,
@@ -61,6 +64,9 @@ class SecureConfig:
             }
         """
         try:
+            if not CRYPTOGRAPHY_AVAILABLE:
+                return False, "cryptography kütüphanesi yüklü değil!"
+            
             # JSON'a dönüştür
             json_data = json.dumps(config_data)
             
@@ -86,6 +92,9 @@ class SecureConfig:
             tuple: (success, data_or_error_message)
         """
         try:
+            if not CRYPTOGRAPHY_AVAILABLE:
+                return False, "cryptography kütüphanesi yüklü değil!"
+            
             config_path = Path(SecureConfig.CONFIG_FILE)
             
             if not config_path.exists():
