@@ -6,10 +6,19 @@ import os
 import json
 import base64
 from pathlib import Path
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
-from cryptography.hazmat.backends import default_backend
+
+try:
+    from cryptography.fernet import Fernet
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    from cryptography.hazmat.backends import default_backend
+    CRYPTOGRAPHY_AVAILABLE = True
+except ImportError:
+    CRYPTOGRAPHY_AVAILABLE = False
+    Fernet = None
+    PBKDF2HMAC = None
+    hashes = None
+    default_backend = None
 
 class SecureConfig:
     """Şifreli konfigürasyon yöneticisi"""
