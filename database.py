@@ -232,24 +232,45 @@ class DatabaseManager:
             logger.error(f"FisNo alma hatası: {e}")
             raise
     
-    def create_fis_record(self, fisno, fis_turu, giris_cikis, depo, aciklama):
-        """stk_Fis tablosuna kayıt oluştur"""
+    def create_fislines_record(self, link_fisno, stok_kodu, barkod_no, net_miktar, 
+                              depo, urun_grup1, grup_kodu, stok_ref_no, depo_ref_no=None, raf_ref_no=None):
+        """stk_FisLines tablosuna kayıt oluştur"""
         try:
-            tarih = datetime.now().strftime('%Y-%m-%d')
+            # GUIDX oluştur
+            guidx = f"{link_fisno}{len(str(link_fisno))}{stok_ref_no}{depo[0] if depo else 'X'}"
+            
+            # DepoRefNo yoksa stk_depo tablosundan al
+            if depo_ref_no is None:
+                depo_ref_no = self.get_depo_ref_no(depo)
+            
+            # RafRefNo yoksa varsayılan kullan (kullanıcı seçmemişse)
+            if raf_ref_no is None:
+                raf_ref_no = 5346  # Varsayılan raf
             
             query = """
-            INSERT INTO stk_Fis (
-                FisTuru, FisNo, GirisCikis, Tarih, FirmaKodu, FirmaAdi, 
-                KdvOrani, AraToplam, calcGenelToplam, DovizKuru, 
-                Aciklamalar, Grup3, KdvDegeri, LogoKontrol, Status, 
-                DepoRefNo, Islemvar, IslemKullanici, IadeKontrol, DevamDurumu
+            INSERT INTO stk_FisLines (
+                Link_FisNo, StokKodu, BarkodNo, NetMiktar, BrutMiktar, BirimFiyat,
+                Depo, UrunGrup1, MiktarBirimi, KdvORani, YBrutMiktar, YDara,
+                Miktar1, Miktar2, Miktar3, Miktar4, Miktar5, AraToplamLines,
+                En, Boy, Yukseklik, Agirlik, Desi, SevkEdildi, AmbalajMiktar,
+                indirimtutari, KoliDara, BobinDara, TBobinDara, SatirNo,
+                StokRefNo, DepoRefNo, RafRefNo, StokTuru, EtiketKontrol,
+                IslemTipi, TransLinesIdno, GUIDX, KULLANICI
             ) VALUES (
-                ?, ?, ?, ?, '', '', 0, 0.00, 0.00, 0.00, ?, ?, 0.00,
-                0, 0, 1, 0, 0, 0, 3
+                ?, ?, ?, ?, 0, 0.00,
+                ?, ?, 'ADET', 0, 0, 0,
+                0, 0, 0, 0, 0, 0.00,
+                0, 0, 0, 0, 0, 0, 1,
+                0.00, 0, 0, 0, 1,
+                ?, ?, ?, 0, 0,
+                0, 0, ?, 8215
             )
             """
             
-            params = (fis_turu, fisno, giris_cikis, tarih, aciklama, depo)
+            params = (
+                link_fisno, stok_kodu, barkod_no, net_miktar,
+                depo, urun_grup1, stok_ref_no, depo_ref_no, raf_ref_no, guidx
+            )
             
             cursor = self.conn_fays.cursor()
             cursor.execute(query, params)
@@ -260,12 +281,131 @@ class DatabaseManager:
             idno = cursor.fetchone()[0]
             cursor.close()
             
-            logger.info(f"Fiş kaydı oluşturuldu - FisNo: {fisno}, idNo: {idno}")
+            logger.info(f"Fiş satırı oluşturuldu - StokKodu: {stok_kodu}, Miktar: {net_miktar}, DepoRefNo: {depo_ref_no}, RafRefNo: {raf_ref_no}")
             return idno
             
         except Exception as e:
-            logger.error(f"Fiş kayıt oluşturma hatası: {e}")
+            logger.error(f"Fiş satırı oluşturma hatası: {e}")
             raise
+    
+    def get_depo_ref_no(self, depo_adi):
+        """stk_depo tablosundan DepoRefNo al"""
+        try:
+            query = """
+            SELECT idNo 
+            FROM stk_depo 
+            WHERE DepoAdi = ? OR DepoAdi COLLATE Turkish_CI_AS = ?
+            """
+            
+            cursor = self.conn_fays.cursor()
+            cursor.execute(query, (depo_adi, depo_adi))
+            row = cursor.fetchone()
+            cursor.close()
+            
+            if row:
+                return int(row[0])
+            else:
+                logger.warning(f"DepoRefNo bulunamadı: {depo_adi}, varsayılan 1 kullanılıyor")
+                return 1
+        except Exception as e:
+            logger.error(f"DepoRefNo alma hatası: {e}")
+            return 1
+    
+    def get_raf_ref_no(self, depo_adi, raf_adi=None):
+        """stk_urungrup5 tablosundan RafRefNo al"""
+        try:
+            if raf_adi:
+                # Belirli raf adına göre ara
+                query = """
+                SELECT idNo 
+                FROM stk_urungrup5 
+                WHERE DepoRefNo = (SELECT idNo FROM stk_depo WHERE DepoAdi = ? OR DepoAdi COLLATE Turkish_CI_AS = ?)
+                  AND (RafAdi = ? OR RafAdi COLLATE Turkish_CI_AS = ?)
+                """
+                depo_ref_no = self.get_depo_ref_no(depo_adi)
+                cursor = self.conn_fays.cursor()
+                cursor.execute(query, (depo_adi, depo_adi, raf_adi, raf_adi))
+            else:
+                # Varsayılan rafı bul (depoya göre)
+                depo_ref_no = self.get_depo_ref_no(depo_adi)
+                query = """
+                SELECT TOP 1 idNo 
+                FROM stk_urungrup5 
+                WHERE DepoRefNo = ?
+                ORDER BY idNo
+                """
+                cursor = self.conn_fays.cursor()
+                cursor.execute(query, (depo_ref_no,))
+            
+            row = cursor.fetchone()
+            cursor.close()
+            
+            if row:
+                return int(row[0])
+            else:
+                logger.warning(f"RafRefNo bulunamadı - Depo: {depo_adi}, Raf: {raf_adi or 'Varsayılan'}, varsayılan 5346 kullanılıyor")
+                return 5346
+        except Exception as e:
+            logger.error(f"RafRefNo alma hatası: {e}")
+            return 5346
+    
+    def get_stok_ref_no_fays(self, stok_kodu):
+        """stk_kart tablosundan StokRefNo al (FAYS)"""
+        try:
+            query = """
+            SELECT idNo 
+            FROM stk_kart 
+            WHERE StokKodu = ? OR StokKodu COLLATE Turkish_CI_AS = ?
+            """
+            
+            cursor = self.conn_fays.cursor()
+            cursor.execute(query, (stok_kodu, stok_kodu))
+            row = cursor.fetchone()
+            cursor.close()
+            
+            if row:
+                return int(row[0])
+            else:
+                logger.warning(f"FAYS StokRefNo bulunamadı: {stok_kodu}, LOGO'dan alınacak")
+                return None
+        except Exception as e:
+            logger.error(f"FAYS StokRefNo alma hatası: {e}")
+            return None
+    
+    def get_fays_stocks_with_raf(self, depo_adi):
+        """FAYS özet raporda bulunan stokları raf bilgisiyle birlikte al"""
+        query = """
+        SELECT 
+            RTRIM(LTRIM(ln.depo)) AS [Depo Adı],
+            RTRIM(LTRIM(LN.StokKodu)) AS [Ürün Kodu],
+            RTRIM(LTRIM(LN.barkodno)) AS [Standart Barkod No],
+            RTRIM(LTRIM(LN.urungrup1)) AS [Ürün Adı],
+            I.STGRPCODE AS [Grup Kodu],
+            RTRIM(LTRIM(LN.miktarbirimi)) AS [Birimi],
+            RTRIM(LTRIM(LN.urungrup5)) AS [Raf Adı],
+            LN.RafRefNo AS [RafRefNo],
+            LN.DepoRefNo AS [DepoRefNo],
+            LN.StokRefNo AS [StokRefNo],
+            SUM(CASE WHEN FS.giriscikis=2 THEN (-1)*LN.NetMiktar ELSE LN.NetMiktar END) as NetMiktar
+        FROM dbo.stk_Fis AS FS WITH (NOLOCK) 
+        LEFT OUTER JOIN dbo.stk_FisLines AS LN WITH (NOLOCK) ON LN.Link_FisNo = FS.FisNo
+        LEFT JOIN GOLD..LG_013_ITEMS AS I ON I.CODE=LN.StokKodu COLLATE Turkish_CI_AS
+        WHERE LN.depo = ? OR LN.depo COLLATE Turkish_CI_AS = ?
+        GROUP BY 
+            ln.depo,
+            LN.StokKodu,
+            LN.barkodno,
+            LN.urungrup1,
+            I.STGRPCODE,
+            LN.miktarbirimi,
+            LN.urungrup5,
+            LN.RafRefNo,
+            LN.DepoRefNo,
+            LN.StokRefNo
+        HAVING SUM(CASE WHEN FS.giriscikis=2 THEN (-1)*LN.NetMiktar ELSE LN.NetMiktar END) <> 0.00
+        """
+        
+        return self.execute_query(query, database='FAYS', params=(depo_adi, depo_adi))
     
     def create_fislines_record(self, link_fisno, stok_kodu, barkod_no, net_miktar, 
                               depo, urun_grup1, grup_kodu, stok_ref_no):

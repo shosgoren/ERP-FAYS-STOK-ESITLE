@@ -53,13 +53,14 @@ class StockSyncEngine:
             logger.error(f"Stok karşılaştırma hatası: {e}")
             raise
     
-    def synchronize_stocks(self, warehouse, df_comparison=None):
+    def synchronize_stocks(self, warehouse, df_comparison=None, default_raf_ref_no=None):
         """
-        Stokları eşitle - FAYS tarafını LOGO'ya göre düzelt
+        Stokları eşitle - ÖNCE FAYS stoklarını 0 yap, SONRA LOGO stoklarına göre giriş yap
         
         Args:
             warehouse: Eşitleme yapılacak depo
             df_comparison: Karşılaştırma DataFrame'i (yoksa yeniden hesaplanır)
+            default_raf_ref_no: Varsayılan raf referans numarası
             
         Returns:
             dict: Eşitleme sonuç raporu
@@ -67,11 +68,49 @@ class StockSyncEngine:
         try:
             logger.info(f"Stok eşitleme başlatıldı - Depo: {warehouse}")
             
+            created_fis = []
+            
+            # ADIM 1: FAYS özet raporda bulunan TÜM stokları 0 yap (raf bilgisi dahil)
+            logger.info("ADIM 1: FAYS stoklarını 0 yapma işlemi başlatılıyor...")
+            df_fays_stocks = self.db.get_fays_stocks_with_raf(warehouse)
+            
+            if len(df_fays_stocks) > 0:
+                logger.info(f"FAYS'da {len(df_fays_stocks)} adet stok kalemi bulundu, çıkış fişi oluşturulacak")
+                
+                # Tüm FAYS stoklarını çıkış fişi ile 0 yap
+                fis_info = self._create_fays_zero_fisi(
+                    df_fays_stocks,
+                    warehouse,
+                    default_raf_ref_no
+                )
+                created_fis.append(fis_info)
+            else:
+                logger.info("FAYS'da stok bulunamadı, 0 yapma işlemi atlandı")
+            
+            # ADIM 2: LOGO stoklarına göre giriş fişi oluştur
+            logger.info("ADIM 2: LOGO stoklarına göre giriş fişi oluşturuluyor...")
+            
             # Karşılaştırma yapılmamışsa yap
             if df_comparison is None:
                 df_comparison = self.compare_stocks(warehouse)
             
-            if len(df_comparison) == 0:
+            # Sadece LOGO'da olan stokları al (FAYS'da olmayan veya eksik olanlar)
+            df_logo_stocks = df_comparison[df_comparison['LOGO FİİLİ STOK'] > 0].copy()
+            
+            if len(df_logo_stocks) > 0:
+                logger.info(f"LOGO'da {len(df_logo_stocks)} adet stok kalemi bulundu, giriş fişi oluşturulacak")
+                
+                # LOGO stoklarına göre giriş fişi oluştur
+                fis_info = self._create_logo_entry_fisi(
+                    df_logo_stocks,
+                    warehouse,
+                    default_raf_ref_no
+                )
+                created_fis.append(fis_info)
+            else:
+                logger.info("LOGO'da stok bulunamadı, giriş fişi oluşturulmayacak")
+            
+            if len(created_fis) == 0:
                 logger.info("Eşitlenecek kayıt bulunamadı")
                 return {
                     'success': True,
@@ -79,37 +118,11 @@ class StockSyncEngine:
                     'created_fis': []
                 }
             
-            created_fis = []
-            
-            # Farklı stokları grupla
-            df_fazla = df_comparison[df_comparison['FARK'] > 0]  # FAYS fazla -> Sayım Eksiği
-            df_eksik = df_comparison[df_comparison['FARK'] < 0]  # FAYS eksik -> Sayım Fazlası
-            
-            # Sayım Eksiği Fişi (FisTuru=51, FAYS fazla, çıkış yapılacak)
-            if len(df_fazla) > 0:
-                fis_info = self._create_sayim_fisi(
-                    df_fazla, 
-                    warehouse,
-                    Config.FIS_SAYIM_EKSIGI,
-                    "0.KAT:SAYILMAYAN VE STOKTA FAZLA OLAN STOKLAR"
-                )
-                created_fis.append(fis_info)
-            
-            # Sayım Fazlası Fişi (FisTuru=50, FAYS eksik, giriş yapılacak)
-            if len(df_eksik) > 0:
-                fis_info = self._create_sayim_fisi(
-                    df_eksik,
-                    warehouse,
-                    Config.FIS_SAYIM_FAZLASI,
-                    "0.KAT:SAYIM YAPILAN VE SAYIM FAZLASI VEREN STOKLAR"
-                )
-                created_fis.append(fis_info)
-            
             result = {
                 'success': True,
                 'message': f'{len(created_fis)} adet fiş oluşturuldu',
                 'created_fis': created_fis,
-                'total_items': len(df_comparison)
+                'total_items': len(df_fays_stocks) + len(df_logo_stocks) if 'df_logo_stocks' in locals() else len(df_fays_stocks)
             }
             
             logger.info(f"Stok eşitleme tamamlandı - {result['message']}")
@@ -123,9 +136,177 @@ class StockSyncEngine:
                 'created_fis': []
             }
     
+    def _create_fays_zero_fisi(self, df_fays_stocks, warehouse, default_raf_ref_no=None):
+        """
+        FAYS stoklarını 0 yapmak için çıkış fişi oluştur (raf bilgisi dahil)
+        
+        Args:
+            df_fays_stocks: FAYS özet raporda bulunan stoklar (raf bilgisi dahil)
+            warehouse: Depo adı
+            default_raf_ref_no: Varsayılan raf referans numarası
+            
+        Returns:
+            dict: Oluşturulan fiş bilgileri
+        """
+        try:
+            # Yeni FisNo al
+            fisno = self.db.get_next_fisno()
+            
+            # Çıkış fişi (FisTuru=51, GirisCikis=2)
+            aciklama = "0.KAT:FAYS STOKLARINI SIFIRLAMA İŞLEMİ"
+            
+            # Ana fiş kaydı oluştur
+            fis_idno = self.db.create_fis_record(
+                fisno=fisno,
+                fis_turu=Config.FIS_SAYIM_EKSIGI,  # 51
+                giris_cikis=2,  # Çıkış
+                depo=warehouse,
+                aciklama=aciklama
+            )
+            
+            # Fiş satırlarını oluştur
+            lines_created = 0
+            for _, row in df_fays_stocks.iterrows():
+                # Mevcut stok miktarını çıkış yap (0 yapmak için)
+                net_miktar = abs(float(row['NetMiktar']))
+                
+                # RafRefNo'yu al (FAYS özet raporda varsa kullan, yoksa varsayılan)
+                raf_ref_no = None
+                if 'RafRefNo' in row and pd.notna(row['RafRefNo']):
+                    raf_ref_no = int(row['RafRefNo'])
+                elif default_raf_ref_no:
+                    raf_ref_no = default_raf_ref_no
+                else:
+                    # stk_urungrup5 tablosundan varsayılan rafı al
+                    raf_ref_no = self.db.get_raf_ref_no(warehouse)
+                
+                # DepoRefNo'yu al (FAYS özet raporda varsa kullan)
+                depo_ref_no = None
+                if 'DepoRefNo' in row and pd.notna(row['DepoRefNo']):
+                    depo_ref_no = int(row['DepoRefNo'])
+                
+                # StokRefNo'yu al (FAYS özet raporda varsa kullan, yoksa stk_kart'tan)
+                stok_ref_no = None
+                if 'StokRefNo' in row and pd.notna(row['StokRefNo']):
+                    stok_ref_no = int(row['StokRefNo'])
+                else:
+                    # stk_kart tablosundan al
+                    stok_ref_no = self.db.get_stok_ref_no_fays(row['Ürün Kodu'])
+                    if stok_ref_no is None:
+                        # LOGO'dan al (fallback)
+                        stok_ref_no = self._get_stok_ref_no(row['Ürün Kodu'])
+                
+                self.db.create_fislines_record(
+                    link_fisno=fisno,
+                    stok_kodu=row['Ürün Kodu'],
+                    barkod_no=row.get('Standart Barkod No', ''),
+                    net_miktar=net_miktar,
+                    depo=warehouse,
+                    urun_grup1=row['Ürün Adı'],
+                    grup_kodu=row.get('Grup Kodu', ''),
+                    stok_ref_no=stok_ref_no,
+                    depo_ref_no=depo_ref_no,
+                    raf_ref_no=raf_ref_no
+                )
+                lines_created += 1
+            
+            fis_info = {
+                'fisno': fisno,
+                'fis_idno': fis_idno,
+                'fis_turu': Config.FIS_SAYIM_EKSIGI,
+                'fis_turu_adi': 'FAYS Stoklarını Sıfırlama (Çıkış)',
+                'lines_count': lines_created,
+                'aciklama': aciklama
+            }
+            
+            logger.info(f"FAYS sıfırlama fişi oluşturuldu - FisNo: {fisno}, Satır: {lines_created}")
+            return fis_info
+            
+        except Exception as e:
+            logger.error(f"FAYS sıfırlama fişi oluşturma hatası: {e}")
+            raise
+    
+    def _create_logo_entry_fisi(self, df_logo_stocks, warehouse, default_raf_ref_no=None):
+        """
+        LOGO stoklarına göre giriş fişi oluştur
+        
+        Args:
+            df_logo_stocks: LOGO'da bulunan stoklar
+            warehouse: Depo adı
+            default_raf_ref_no: Varsayılan raf referans numarası
+            
+        Returns:
+            dict: Oluşturulan fiş bilgileri
+        """
+        try:
+            # Yeni FisNo al
+            fisno = self.db.get_next_fisno()
+            
+            # Giriş fişi (FisTuru=50, GirisCikis=1)
+            aciklama = "0.KAT:LOGO STOKLARINA GÖRE SAYIM FAZLASI GİRİŞİ"
+            
+            # Ana fiş kaydı oluştur
+            fis_idno = self.db.create_fis_record(
+                fisno=fisno,
+                fis_turu=Config.FIS_SAYIM_FAZLASI,  # 50
+                giris_cikis=1,  # Giriş
+                depo=warehouse,
+                aciklama=aciklama
+            )
+            
+            # RafRefNo'yu belirle
+            raf_ref_no = default_raf_ref_no
+            if raf_ref_no is None:
+                # stk_urungrup5 tablosundan varsayılan rafı al
+                raf_ref_no = self.db.get_raf_ref_no(warehouse)
+            
+            # Fiş satırlarını oluştur
+            lines_created = 0
+            for _, row in df_logo_stocks.iterrows():
+                # LOGO'daki stok miktarını giriş yap
+                net_miktar = abs(float(row['LOGO FİİLİ STOK']))
+                
+                # StokRefNo'yu LOGO'dan al
+                stok_ref_no = self._get_stok_ref_no(row['MALZEME KODU'])
+                
+                # FAYS'ta stok kartı varsa onu kullan
+                fays_stok_ref_no = self.db.get_stok_ref_no_fays(row['MALZEME KODU'])
+                if fays_stok_ref_no:
+                    stok_ref_no = fays_stok_ref_no
+                
+                self.db.create_fislines_record(
+                    link_fisno=fisno,
+                    stok_kodu=row['MALZEME KODU'],
+                    barkod_no='',  # Barkod bilgisi LOGO'da yoksa boş
+                    net_miktar=net_miktar,
+                    depo=warehouse,
+                    urun_grup1=row['MALZEME ADI'],
+                    grup_kodu=row.get('GRUP KODU', ''),
+                    stok_ref_no=stok_ref_no,
+                    depo_ref_no=None,  # Otomatik alınacak
+                    raf_ref_no=raf_ref_no
+                )
+                lines_created += 1
+            
+            fis_info = {
+                'fisno': fisno,
+                'fis_idno': fis_idno,
+                'fis_turu': Config.FIS_SAYIM_FAZLASI,
+                'fis_turu_adi': 'LOGO Stoklarına Göre Giriş',
+                'lines_count': lines_created,
+                'aciklama': aciklama
+            }
+            
+            logger.info(f"LOGO giriş fişi oluşturuldu - FisNo: {fisno}, Satır: {lines_created}")
+            return fis_info
+            
+        except Exception as e:
+            logger.error(f"LOGO giriş fişi oluşturma hatası: {e}")
+            raise
+    
     def _create_sayim_fisi(self, df_items, warehouse, fis_turu, aciklama):
         """
-        Sayım fişi ve satırlarını oluştur
+        Sayım fişi ve satırlarını oluştur (ESKİ METOD - Geriye uyumluluk için)
         
         Args:
             df_items: İşlenecek stok kalemleri
