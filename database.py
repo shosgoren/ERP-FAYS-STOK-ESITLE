@@ -335,6 +335,7 @@ class DatabaseManager:
     def get_depo_ref_no(self, depo_adi):
         """stk_depo tablosundan DepoRefNo al"""
         try:
+            # Önce DepoAdi kolonu ile dene
             query = """
             SELECT idNo 
             FROM stk_depo 
@@ -344,13 +345,40 @@ class DatabaseManager:
             cursor = self.conn_fays.cursor()
             cursor.execute(query, (depo_adi, depo_adi))
             row = cursor.fetchone()
-            cursor.close()
             
             if row:
-                return int(row[0])
-            else:
-                logger.warning(f"DepoRefNo bulunamadı: {depo_adi}, varsayılan 1 kullanılıyor")
-                return 1
+                cursor.close()
+                depo_ref_no = int(row[0])
+                logger.info(f"DepoRefNo bulundu: {depo_adi} -> {depo_ref_no}")
+                return depo_ref_no
+            
+            # DepoAdi bulunamazsa Depo kolonu ile dene
+            query2 = """
+            SELECT idNo 
+            FROM stk_depo 
+            WHERE Depo = ? OR Depo COLLATE Turkish_CI_AS = ?
+            """
+            cursor.execute(query2, (depo_adi, depo_adi))
+            row = cursor.fetchone()
+            
+            if row:
+                cursor.close()
+                depo_ref_no = int(row[0])
+                logger.info(f"DepoRefNo bulundu (Depo kolonu ile): {depo_adi} -> {depo_ref_no}")
+                return depo_ref_no
+            
+            # Hiçbir şey bulunamazsa tüm depoları listele (debug için)
+            query3 = "SELECT TOP 10 idNo, DepoAdi, Depo FROM stk_depo"
+            cursor.execute(query3)
+            rows = cursor.fetchall()
+            cursor.close()
+            
+            logger.warning(f"DepoRefNo bulunamadı: {depo_adi}")
+            if rows:
+                logger.warning(f"Mevcut depolar: {[str(r) for r in rows]}")
+            
+            logger.warning(f"Varsayılan DepoRefNo=1 kullanılıyor")
+            return 1
         except Exception as e:
             logger.error(f"DepoRefNo alma hatası: {e}")
             return 1
@@ -421,6 +449,8 @@ class DatabaseManager:
         try:
             depo_ref_no = self.get_depo_ref_no(depo_adi)
             
+            logger.info(f"Raf listesi aranıyor - Depo: {depo_adi}, DepoRefNo: {depo_ref_no}")
+            
             query = """
             SELECT idNo, RafAdi 
             FROM stk_urungrup5 
@@ -429,6 +459,8 @@ class DatabaseManager:
             """
             
             df = self.execute_query(query, database='FAYS', params=(depo_ref_no,))
+            
+            logger.info(f"stk_urungrup5 sorgusu sonucu: {len(df)} kayıt bulundu")
             
             # DataFrame'den liste oluştur [(idNo, RafAdi), ...]
             raflar = []
@@ -439,10 +471,37 @@ class DatabaseManager:
                         'RafAdi': row['RafAdi'] if pd.notna(row['RafAdi']) else ''
                     })
             
+            if len(raflar) == 0:
+                # Debug: DepoRefNo ile kaç raf var kontrol et
+                debug_query = """
+                SELECT COUNT(*) as ToplamRaf 
+                FROM stk_urungrup5 
+                WHERE DepoRefNo = ?
+                """
+                cursor = self.conn_fays.cursor()
+                cursor.execute(debug_query, (depo_ref_no,))
+                count_row = cursor.fetchone()
+                cursor.close()
+                
+                if count_row and count_row[0] > 0:
+                    logger.warning(f"DepoRefNo={depo_ref_no} için {count_row[0]} raf var ama sorgu sonuç vermedi!")
+                else:
+                    logger.warning(f"DepoRefNo={depo_ref_no} için hiç raf bulunamadı!")
+                    
+                    # Tüm rafları listele (debug)
+                    debug_query2 = """
+                    SELECT TOP 10 DepoRefNo, idNo, RafAdi 
+                    FROM stk_urungrup5 
+                    ORDER BY DepoRefNo
+                    """
+                    df_debug = self.execute_query(debug_query2, database='FAYS')
+                    if len(df_debug) > 0:
+                        logger.warning(f"Mevcut raflar (ilk 10): {df_debug.to_dict('records')}")
+            
             logger.info(f"{depo_adi} deposu için {len(raflar)} adet raf bulundu")
             return raflar
         except Exception as e:
-            logger.error(f"Raf listesi alma hatası: {e}")
+            logger.error(f"Raf listesi alma hatası: {e}", exc_info=True)
             return []
     
     def get_stok_ref_no_fays(self, stok_kodu):
