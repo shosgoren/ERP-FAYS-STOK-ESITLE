@@ -493,7 +493,28 @@ class DatabaseManager:
             
             df = self.execute_query(query, database='FAYS', params=(depo_ref_no,))
             
-            logger.info(f"stk_urungrup5 sorgusu sonucu: {len(df)} kayıt bulundu")
+            logger.info(f"stk_urungrup5 sorgusu sonucu (DepoRefNo={depo_ref_no}): {len(df)} kayıt bulundu")
+            
+            # Eğer DepoRefNo ile bulunamazsa, depo adı ile direkt JOIN yap
+            if len(df) == 0:
+                logger.warning(f"DepoRefNo={depo_ref_no} ile raf bulunamadı, depo adı ile direkt arama yapılıyor...")
+                
+                # stk_depo tablosundan tüm kolonları kontrol et
+                try:
+                    # Depo adına göre direkt JOIN yap
+                    query2 = """
+                    SELECT DISTINCT R.idNo, R.RafAdi 
+                    FROM stk_urungrup5 R
+                    INNER JOIN stk_depo D ON R.DepoRefNo = D.idNo
+                    WHERE (D.DepoAdi = ? OR D.DepoAdi COLLATE Turkish_CI_AS = ?)
+                       OR (D.Depo = ? OR D.Depo COLLATE Turkish_CI_AS = ?)
+                       OR (D.Name = ? OR D.Name COLLATE Turkish_CI_AS = ?)
+                    ORDER BY R.RafAdi
+                    """
+                    df = self.execute_query(query2, database='FAYS', params=(depo_adi, depo_adi, depo_adi, depo_adi, depo_adi, depo_adi))
+                    logger.info(f"Depo adı ile direkt JOIN sonucu: {len(df)} kayıt bulundu")
+                except Exception as e2:
+                    logger.error(f"Depo adı ile JOIN arama hatası: {e2}")
             
             # DataFrame'den liste oluştur [(idNo, RafAdi), ...]
             raflar = []
