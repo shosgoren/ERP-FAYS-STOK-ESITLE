@@ -34,6 +34,11 @@ env/
 
 # Environment variables
 .env
+config_local.py
+
+# Şifreli konfigürasyon ve şablonlar (kullanıcıya özel)
+connection.dat
+sql_templates.json
 
 # Logs
 *.log
