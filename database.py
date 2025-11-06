@@ -232,6 +232,45 @@ class DatabaseManager:
             logger.error(f"FisNo alma hatası: {e}")
             raise
     
+    def create_fis_record(self, fisno, fis_turu, giris_cikis, depo, aciklama, depo_ref_no=None):
+        """stk_Fis tablosuna kayıt oluştur"""
+        try:
+            tarih = datetime.now().strftime('%Y-%m-%d')
+            
+            # DepoRefNo yoksa stk_depo tablosundan al
+            if depo_ref_no is None:
+                depo_ref_no = self.get_depo_ref_no(depo)
+            
+            query = """
+            INSERT INTO stk_Fis (
+                FisTuru, FisNo, GirisCikis, Tarih, FirmaKodu, FirmaAdi, 
+                KdvOrani, AraToplam, calcGenelToplam, DovizKuru, 
+                Aciklamalar, Grup3, KdvDegeri, LogoKontrol, Status, 
+                DepoRefNo, Islemvar, IslemKullanici, IadeKontrol, DevamDurumu
+            ) VALUES (
+                ?, ?, ?, ?, '', '', 0, 0.00, 0.00, 0.00, ?, ?, 0.00,
+                0, 0, ?, 0, 0, 0, 3
+            )
+            """
+            
+            params = (fis_turu, fisno, giris_cikis, tarih, aciklama, depo, depo_ref_no)
+            
+            cursor = self.conn_fays.cursor()
+            cursor.execute(query, params)
+            self.conn_fays.commit()
+            
+            # idNo'yu al
+            cursor.execute("SELECT @@IDENTITY")
+            idno = cursor.fetchone()[0]
+            cursor.close()
+            
+            logger.info(f"Fiş kaydı oluşturuldu - FisNo: {fisno}, idNo: {idno}, DepoRefNo: {depo_ref_no}")
+            return idno
+            
+        except Exception as e:
+            logger.error(f"Fiş kayıt oluşturma hatası: {e}")
+            raise
+    
     def create_fislines_record(self, link_fisno, stok_kodu, barkod_no, net_miktar, 
                               depo, urun_grup1, grup_kodu, stok_ref_no, depo_ref_no=None, raf_ref_no=None):
         """stk_FisLines tablosuna kayıt oluştur"""
@@ -406,57 +445,6 @@ class DatabaseManager:
         """
         
         return self.execute_query(query, database='FAYS', params=(depo_adi, depo_adi))
-    
-    def create_fislines_record(self, link_fisno, stok_kodu, barkod_no, net_miktar, 
-                              depo, urun_grup1, grup_kodu, stok_ref_no):
-        """stk_FisLines tablosuna kayıt oluştur"""
-        try:
-            # GUIDX oluştur
-            guidx = f"{link_fisno}{len(str(link_fisno))}{stok_ref_no}{depo[0] if depo else 'X'}"
-            
-            query = """
-            INSERT INTO stk_FisLines (
-                Link_FisNo, StokKodu, BarkodNo, NetMiktar, BrutMiktar, BirimFiyat,
-                Depo, UrunGrup1, MiktarBirimi, KdvORani, YBrutMiktar, YDara,
-                Miktar1, Miktar2, Miktar3, Miktar4, Miktar5, AraToplamLines,
-                En, Boy, Yukseklik, Agirlik, Desi, SevkEdildi, AmbalajMiktar,
-                indirimtutari, KoliDara, BobinDara, TBobinDara, SatirNo,
-                StokRefNo, DepoRefNo, RafRefNo, StokTuru, EtiketKontrol,
-                IslemTipi, TransLinesIdno, GUIDX, KULLANICI
-            ) VALUES (
-                ?, ?, ?, ?, 0, 0.00,
-                ?, ?, 'ADET', 0, 0, 0,
-                0, 0, 0, 0, 0, 0.00,
-                0, 0, 0, 0, 0, 0, 1,
-                0.00, 0, 0, 0, 1,
-                ?, 1, ?, 0, 0,
-                0, 0, ?, 8215
-            )
-            """
-            
-            # RafRefNo için varsayılan değer (örnek kayıtta 5346)
-            raf_ref_no = 5346
-            
-            params = (
-                link_fisno, stok_kodu, barkod_no, net_miktar,
-                depo, urun_grup1, stok_ref_no, raf_ref_no, guidx
-            )
-            
-            cursor = self.conn_fays.cursor()
-            cursor.execute(query, params)
-            self.conn_fays.commit()
-            
-            # idNo'yu al
-            cursor.execute("SELECT @@IDENTITY")
-            idno = cursor.fetchone()[0]
-            cursor.close()
-            
-            logger.info(f"Fiş satırı oluşturuldu - StokKodu: {stok_kodu}, Miktar: {net_miktar}")
-            return idno
-            
-        except Exception as e:
-            logger.error(f"Fiş satırı oluşturma hatası: {e}")
-            raise
     
     def get_fays_stock_summary(self):
         """FAYS WMS özet stok raporu"""
