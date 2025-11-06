@@ -249,7 +249,7 @@ try:
         database=DATABASE_FAYS
     )
     
-    query = "SELECT Link_Numarasi, Deger FROM yr_BilgiLines WHERE Link_Numarasi = 99102"
+    query = "SELECT Link_Numara, Deger FROM yr_BilgiLines WHERE Link_Numara = 99102"
     df_fisno = pd.read_sql(query, conn_fays)
     
     if len(df_fisno) > 0:

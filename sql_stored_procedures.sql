@@ -188,10 +188,10 @@ BEGIN
         BEGIN
             -- FisNo al
             SELECT @FisNoEksik = CAST(Deger AS BIGINT) + 1
-            FROM yr_BilgiLines WHERE Link_Numarasi = 99102;
+            FROM yr_BilgiLines WHERE Link_Numara = 99102;
             
             -- yr_BilgiLines güncelle
-            UPDATE yr_BilgiLines SET Deger = @FisNoEksik WHERE Link_Numarasi = 99102;
+            UPDATE yr_BilgiLines SET Deger = @FisNoEksik WHERE Link_Numara = 99102;
             
             -- Ana fiş oluştur
             INSERT INTO stk_Fis (FisTuru, FisNo, GirisCikis, Tarih, Aciklamalar, Grup3, 
@@ -226,10 +226,10 @@ BEGIN
         BEGIN
             -- FisNo al
             SELECT @FisNoFazla = CAST(Deger AS BIGINT) + 1
-            FROM yr_BilgiLines WHERE Link_Numarasi = 99102;
+            FROM yr_BilgiLines WHERE Link_Numara = 99102;
             
             -- yr_BilgiLines güncelle
-            UPDATE yr_BilgiLines SET Deger = @FisNoFazla WHERE Link_Numarasi = 99102;
+            UPDATE yr_BilgiLines SET Deger = @FisNoFazla WHERE Link_Numara = 99102;
             
             -- Ana fiş oluştur
             INSERT INTO stk_Fis (FisTuru, FisNo, GirisCikis, Tarih, Aciklamalar, Grup3,

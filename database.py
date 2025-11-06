@@ -201,7 +201,7 @@ class DatabaseManager:
             query = f"""
             SELECT Deger 
             FROM yr_BilgiLines 
-            WHERE Link_Numarasi = {Config.FISNO_LINK_NUMARASI}
+            WHERE Link_Numara = {Config.FISNO_LINK_NUMARASI}
             """
             
             cursor = self.conn_fays.cursor()
@@ -216,7 +216,7 @@ class DatabaseManager:
                 update_query = f"""
                 UPDATE yr_BilgiLines 
                 SET Deger = {next_fisno}
-                WHERE Link_Numarasi = {Config.FISNO_LINK_NUMARASI}
+                WHERE Link_Numara = {Config.FISNO_LINK_NUMARASI}
                 """
                 cursor.execute(update_query)
                 self.conn_fays.commit()

@@ -185,13 +185,13 @@ CREATE TABLE stk_FisLines (
 
 -- yr_BilgiLines Tablosu (FisNo Yönetimi)
 CREATE TABLE yr_BilgiLines (
-    Link_Numarasi INT PRIMARY KEY,
+    Link_Numara INT PRIMARY KEY,
     Deger BIGINT
 );
 
 -- Test Verileri - FAYS
 -- FisNo başlangıç değeri
-INSERT INTO yr_BilgiLines (Link_Numarasi, Deger) VALUES (99102, 1067968);
+INSERT INTO yr_BilgiLines (Link_Numara, Deger) VALUES (99102, 1067968);
 
 -- Test Fişleri (Mevcut stok hareketleri)
 -- Giriş Fişi
