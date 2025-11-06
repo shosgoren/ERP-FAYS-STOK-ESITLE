@@ -333,23 +333,23 @@ class DatabaseManager:
             raise
     
     def get_depo_ref_no(self, depo_adi):
-        """stk_depo tablosundan DepoRefNo al"""
+        """stk_Depo tablosundan DepoRefNo al (DepoKodu kolonu ile)"""
         try:
             # Önce tablo yapısını kontrol et (debug)
             try:
                 cursor = self.conn_fays.cursor()
-                cursor.execute("SELECT TOP 1 * FROM stk_depo")
+                cursor.execute("SELECT TOP 1 * FROM stk_Depo")
                 columns = [column[0] for column in cursor.description]
                 cursor.close()
-                logger.info(f"stk_depo tablosu kolonları: {columns}")
+                logger.info(f"stk_Depo tablosu kolonları: {columns}")
             except:
                 pass
             
-            # Önce DepoAdi kolonu ile dene
+            # DepoKodu kolonu ile ara
             query = """
             SELECT idNo 
-            FROM stk_depo 
-            WHERE DepoAdi = ? OR DepoAdi COLLATE Turkish_CI_AS = ?
+            FROM stk_Depo 
+            WHERE DepoKodu = ? OR DepoKodu COLLATE Turkish_CI_AS = ?
             """
             
             cursor = self.conn_fays.cursor()
@@ -362,13 +362,28 @@ class DatabaseManager:
                 logger.info(f"DepoRefNo bulundu: {depo_adi} -> {depo_ref_no}")
                 return depo_ref_no
             
-            # DepoAdi bulunamazsa Depo kolonu ile dene
+            # DepoKodu bulunamazsa DepoAdi kolonu ile dene
             query2 = """
             SELECT idNo 
-            FROM stk_depo 
-            WHERE Depo = ? OR Depo COLLATE Turkish_CI_AS = ?
+            FROM stk_Depo 
+            WHERE DepoAdi = ? OR DepoAdi COLLATE Turkish_CI_AS = ?
             """
             cursor.execute(query2, (depo_adi, depo_adi))
+            row = cursor.fetchone()
+            
+            if row:
+                cursor.close()
+                depo_ref_no = int(row[0])
+                logger.info(f"DepoRefNo bulundu (DepoAdi kolonu ile): {depo_adi} -> {depo_ref_no}")
+                return depo_ref_no
+            
+            # Depo kolonu ile de dene
+            query3 = """
+            SELECT idNo 
+            FROM stk_Depo 
+            WHERE Depo = ? OR Depo COLLATE Turkish_CI_AS = ?
+            """
+            cursor.execute(query3, (depo_adi, depo_adi))
             row = cursor.fetchone()
             
             if row:
@@ -378,12 +393,12 @@ class DatabaseManager:
                 return depo_ref_no
             
             # Name kolonu ile de dene (LOGO'daki gibi)
-            query3 = """
+            query4 = """
             SELECT idNo 
-            FROM stk_depo 
+            FROM stk_Depo 
             WHERE Name = ? OR Name COLLATE Turkish_CI_AS = ?
             """
-            cursor.execute(query3, (depo_adi, depo_adi))
+            cursor.execute(query4, (depo_adi, depo_adi))
             row = cursor.fetchone()
             
             if row:
@@ -393,17 +408,17 @@ class DatabaseManager:
                 return depo_ref_no
             
             # Hiçbir şey bulunamazsa tüm depoları listele (debug için)
-            query4 = "SELECT TOP 10 idNo, DepoAdi, Depo, Name FROM stk_depo"
+            query5 = "SELECT TOP 10 idNo, DepoKodu, DepoAdi, Depo, Name FROM stk_Depo"
             try:
-                cursor.execute(query4)
+                cursor.execute(query5)
                 rows = cursor.fetchall()
                 logger.warning(f"DepoRefNo bulunamadı: {depo_adi}")
                 if rows:
                     logger.warning(f"Mevcut depolar: {[str(r) for r in rows]}")
             except:
                 # Kolonlar yoksa sadece idNo ile dene
-                query5 = "SELECT TOP 10 idNo FROM stk_depo"
-                cursor.execute(query5)
+                query6 = "SELECT TOP 10 idNo FROM stk_Depo"
+                cursor.execute(query6)
                 rows = cursor.fetchall()
                 logger.warning(f"DepoRefNo bulunamadı: {depo_adi}")
                 logger.warning(f"Mevcut depo idNo'ları: {[r[0] for r in rows]}")
@@ -417,27 +432,29 @@ class DatabaseManager:
             return 1
     
     def get_raf_ref_no(self, depo_adi, raf_adi=None):
-        """stk_urungrup5 tablosundan RafRefNo al (depo kolonu ile)"""
+        """stk_UrunGrup5 tablosundan RafRefNo al (DepoKodu ile JOIN)"""
         try:
             if raf_adi:
-                # Belirli raf adına göre ara (depo ve urungrubu kolonları ile)
+                # Belirli raf adına göre ara (DepoKodu ve UrunGrubu ile)
                 query = """
-                SELECT idNo 
-                FROM stk_urungrup5 
-                WHERE (depo = ? OR depo COLLATE Turkish_CI_AS = ?)
-                  AND (urungrubu = ? OR urungrubu COLLATE Turkish_CI_AS = ?)
+                SELECT R.idNo 
+                FROM stk_UrunGrup5 R
+                INNER JOIN stk_Depo D ON R.DepoRefNo = D.idNo
+                WHERE (D.DepoKodu = ? OR D.DepoKodu COLLATE Turkish_CI_AS = ?)
+                  AND (R.UrunGrubu = ? OR R.UrunGrubu COLLATE Turkish_CI_AS = ?)
                 """
                 cursor = self.conn_fays.cursor()
                 cursor.execute(query, (depo_adi, depo_adi, raf_adi, raf_adi))
             else:
                 # Varsayılan rafı bul (depoya göre)
                 query = """
-                SELECT TOP 1 idNo 
-                FROM stk_urungrup5 
-                WHERE (depo = ? OR depo COLLATE Turkish_CI_AS = ?)
-                  AND urungrubu IS NOT NULL 
-                  AND urungrubu <> ''
-                ORDER BY idNo
+                SELECT TOP 1 R.idNo 
+                FROM stk_UrunGrup5 R
+                INNER JOIN stk_Depo D ON R.DepoRefNo = D.idNo
+                WHERE (D.DepoKodu = ? OR D.DepoKodu COLLATE Turkish_CI_AS = ?)
+                  AND R.UrunGrubu IS NOT NULL 
+                  AND R.UrunGrubu <> ''
+                ORDER BY R.idNo
                 """
                 cursor = self.conn_fays.cursor()
                 cursor.execute(query, (depo_adi, depo_adi))
@@ -455,11 +472,11 @@ class DatabaseManager:
             return 5346
     
     def get_raf_adi(self, raf_ref_no):
-        """RafRefNo'ya göre raf adını al (urungrubu kolonundan)"""
+        """RafRefNo'ya göre raf adını al (UrunGrubu kolonundan)"""
         try:
             query = """
-            SELECT urungrubu 
-            FROM stk_urungrup5 
+            SELECT UrunGrubu 
+            FROM stk_UrunGrup5 
             WHERE idNo = ?
             """
             
@@ -478,23 +495,24 @@ class DatabaseManager:
             return ''
     
     def get_raflar(self, depo_adi):
-        """Seçilen depoya göre raf listesini al (stk_urungrup5 tablosundan direkt)"""
+        """Seçilen depoya göre raf listesini al (stk_UrunGrup5 ve stk_Depo JOIN ile)"""
         try:
             logger.info(f"Raf listesi aranıyor - Depo: {depo_adi}")
             
-            # stk_urungrup5 tablosunda depo kolonu ile direkt arama yap
+            # stk_UrunGrup5 ve stk_Depo JOIN ile raf listesini al
             query = """
-            SELECT DISTINCT idNo, urungrubu AS RafAdi, DepoRefNo 
-            FROM stk_urungrup5 
-            WHERE (depo = ? OR depo COLLATE Turkish_CI_AS = ?)
-              AND urungrubu IS NOT NULL 
-              AND urungrubu <> ''
-            ORDER BY urungrubu
+            SELECT DISTINCT R.idNo, R.UrunGrubu AS RafAdi, R.DepoRefNo 
+            FROM stk_UrunGrup5 R
+            INNER JOIN stk_Depo D ON R.DepoRefNo = D.idNo
+            WHERE (D.DepoKodu = ? OR D.DepoKodu COLLATE Turkish_CI_AS = ?)
+              AND R.UrunGrubu IS NOT NULL 
+              AND R.UrunGrubu <> ''
+            ORDER BY R.UrunGrubu
             """
             
             df = self.execute_query(query, database='FAYS', params=(depo_adi, depo_adi))
             
-            logger.info(f"stk_urungrup5 sorgusu sonucu (depo={depo_adi}): {len(df)} kayıt bulundu")
+            logger.info(f"stk_UrunGrup5 sorgusu sonucu (DepoKodu={depo_adi}): {len(df)} kayıt bulundu")
             
             # DataFrame'den liste oluştur [(idNo, RafAdi), ...]
             raflar = []
@@ -514,8 +532,9 @@ class DatabaseManager:
                 # Debug: Bu depo için kaç kayıt var kontrol et
                 debug_query = """
                 SELECT COUNT(*) as ToplamKayit 
-                FROM stk_urungrup5 
-                WHERE (depo = ? OR depo COLLATE Turkish_CI_AS = ?)
+                FROM stk_UrunGrup5 R
+                INNER JOIN stk_Depo D ON R.DepoRefNo = D.idNo
+                WHERE (D.DepoKodu = ? OR D.DepoKodu COLLATE Turkish_CI_AS = ?)
                 """
                 cursor = self.conn_fays.cursor()
                 cursor.execute(debug_query, (depo_adi, depo_adi))
@@ -523,21 +542,21 @@ class DatabaseManager:
                 cursor.close()
                 
                 if count_row and count_row[0] > 0:
-                    logger.warning(f"Depo '{depo_adi}' için {count_row[0]} kayıt var ama urungrubu boş!")
+                    logger.warning(f"Depo '{depo_adi}' için {count_row[0]} kayıt var ama UrunGrubu boş!")
                 else:
                     logger.warning(f"Depo '{depo_adi}' için hiç kayıt bulunamadı!")
                     
-                    # Tüm depo isimlerini listele (debug)
+                    # Tüm depo kodlarını listele (debug)
                     debug_query2 = """
-                    SELECT DISTINCT TOP 10 depo 
-                    FROM stk_urungrup5 
-                    WHERE depo IS NOT NULL AND depo <> ''
-                    ORDER BY depo
+                    SELECT DISTINCT TOP 10 D.DepoKodu 
+                    FROM stk_Depo D
+                    WHERE D.DepoKodu IS NOT NULL AND D.DepoKodu <> ''
+                    ORDER BY D.DepoKodu
                     """
                     df_debug = self.execute_query(debug_query2, database='FAYS')
                     if len(df_debug) > 0:
-                        mevcut_depolar = [row['depo'] for _, row in df_debug.iterrows()]
-                        logger.warning(f"Mevcut depo isimleri (ilk 10): {mevcut_depolar}")
+                        mevcut_depolar = [row['DepoKodu'] for _, row in df_debug.iterrows()]
+                        logger.warning(f"Mevcut depo kodları (ilk 10): {mevcut_depolar}")
             
             logger.info(f"{depo_adi} deposu için {len(raflar)} adet raf bulundu")
             return raflar
