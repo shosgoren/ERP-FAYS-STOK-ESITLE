@@ -10,6 +10,8 @@ import pandas as pd
 import logging
 from datetime import datetime
 from config import Config
+from config_secure import SecureConfig
+from sql_templates import SQLTemplates
 
 logger = logging.getLogger(__name__)
 
@@ -117,12 +119,24 @@ class ConnectionFrame(ctk.CTkFrame):
         self.fays_db_entry.grid(row=4, column=1, padx=20, pady=15)
         self.fays_db_entry.insert(0, Config.DB_FAYS)
         
-        # Butonlar
-        button_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
-        button_frame.grid(row=5, column=0, columnspan=2, pady=30)
+        # Butonlar - 1. Satır
+        button_frame1 = ctk.CTkFrame(form_frame, fg_color="transparent")
+        button_frame1.grid(row=5, column=0, columnspan=2, pady=15)
+        
+        self.load_btn = ctk.CTkButton(
+            button_frame1,
+            text="📂 Kayıtlı Bağlantıyı Yükle",
+            command=self.load_secure_config,
+            width=200,
+            height=40,
+            font=ctk.CTkFont(size=14),
+            fg_color="#2196F3",
+            hover_color="#1976D2"
+        )
+        self.load_btn.pack(side="left", padx=10)
         
         self.connect_btn = ctk.CTkButton(
-            button_frame,
+            button_frame1,
             text="🔌 Bağlan",
             command=self.connect,
             width=200,
@@ -134,24 +148,42 @@ class ConnectionFrame(ctk.CTkFrame):
         self.connect_btn.pack(side="left", padx=10)
         
         self.test_btn = ctk.CTkButton(
-            button_frame,
+            button_frame1,
             text="🔍 Bağlantıyı Test Et",
             command=self.test_connection,
             width=200,
             height=40,
-            font=ctk.CTkFont(size=16)
+            font=ctk.CTkFont(size=14)
         )
         self.test_btn.pack(side="left", padx=10)
         
+        # Butonlar - 2. Satır
+        button_frame2 = ctk.CTkFrame(form_frame, fg_color="transparent")
+        button_frame2.grid(row=6, column=0, columnspan=2, pady=15)
+        
         self.save_btn = ctk.CTkButton(
-            button_frame,
-            text="💾 Ayarları Kaydet",
-            command=self.save_settings,
+            button_frame2,
+            text="💾 Bağlantıyı Şifreli Kaydet",
+            command=self.save_secure_config,
             width=200,
             height=40,
-            font=ctk.CTkFont(size=16)
+            font=ctk.CTkFont(size=14),
+            fg_color="#FF9800",
+            hover_color="#F57C00"
         )
         self.save_btn.pack(side="left", padx=10)
+        
+        self.delete_btn = ctk.CTkButton(
+            button_frame2,
+            text="🗑️ Kaydı Sil",
+            command=self.delete_secure_config,
+            width=200,
+            height=40,
+            font=ctk.CTkFont(size=14),
+            fg_color="#F44336",
+            hover_color="#D32F2F"
+        )
+        self.delete_btn.pack(side="left", padx=10)
         
         # Durum mesajı
         self.status_label = ctk.CTkLabel(
@@ -214,18 +246,81 @@ class ConnectionFrame(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Hata", f"Test hatası:\n{str(e)}")
     
-    def save_settings(self):
-        """Ayarları .env dosyasına kaydet"""
+    def save_secure_config(self):
+        """Bağlantı bilgilerini şifreli olarak kaydet"""
         try:
-            Config.save_to_env('DB_SERVER', self.server_entry.get())
-            Config.save_to_env('DB_USER', self.username_entry.get())
-            Config.save_to_env('DB_PASSWORD', self.password_entry.get())
-            Config.save_to_env('DB_LOGO', self.logo_db_entry.get())
-            Config.save_to_env('DB_FAYS', self.fays_db_entry.get())
+            config_data = {
+                'DB_SERVER': self.server_entry.get(),
+                'DB_USER': self.username_entry.get(),
+                'DB_PASSWORD': self.password_entry.get(),
+                'DB_LOGO': self.logo_db_entry.get(),
+                'DB_FAYS': self.fays_db_entry.get(),
+            }
             
-            messagebox.showinfo("Başarılı", "Ayarlar kaydedildi!")
+            success, message = SecureConfig.save_config(config_data)
+            
+            if success:
+                messagebox.showinfo("Başarılı", "Bağlantı bilgileri şifreli olarak kaydedildi!\n\n"
+                                               "Bir sonraki açılışta '📂 Kayıtlı Bağlantıyı Yükle' "
+                                               "butonuna tıklayarak yükleyebilirsiniz.")
+            else:
+                messagebox.showerror("Hata", message)
         except Exception as e:
-            messagebox.showerror("Hata", f"Ayarlar kaydedilemedi:\n{str(e)}")
+            messagebox.showerror("Hata", f"Kayıt hatası:\n{str(e)}")
+    
+    def load_secure_config(self):
+        """Kaydedilmiş bağlantı bilgilerini yükle"""
+        try:
+            if not SecureConfig.config_exists():
+                messagebox.showwarning("Uyarı", "Kaydedilmiş bağlantı bilgisi bulunamadı!")
+                return
+            
+            success, result = SecureConfig.load_config()
+            
+            if success:
+                # Form alanlarını doldur
+                self.server_entry.delete(0, tk.END)
+                self.server_entry.insert(0, result.get('DB_SERVER', ''))
+                
+                self.username_entry.delete(0, tk.END)
+                self.username_entry.insert(0, result.get('DB_USER', ''))
+                
+                self.password_entry.delete(0, tk.END)
+                self.password_entry.insert(0, result.get('DB_PASSWORD', ''))
+                
+                self.logo_db_entry.delete(0, tk.END)
+                self.logo_db_entry.insert(0, result.get('DB_LOGO', 'GOLD'))
+                
+                self.fays_db_entry.delete(0, tk.END)
+                self.fays_db_entry.insert(0, result.get('DB_FAYS', 'FaysWMSAkturk'))
+                
+                messagebox.showinfo("Başarılı", "Bağlantı bilgileri yüklendi!\n"
+                                               "Şimdi 'Bağlan' butonuna tıklayabilirsiniz.")
+            else:
+                messagebox.showerror("Hata", result)
+        except Exception as e:
+            messagebox.showerror("Hata", f"Yükleme hatası:\n{str(e)}")
+    
+    def delete_secure_config(self):
+        """Kaydedilmiş bağlantı bilgilerini sil"""
+        try:
+            if not SecureConfig.config_exists():
+                messagebox.showwarning("Uyarı", "Silinecek kayıt bulunamadı!")
+                return
+            
+            response = messagebox.askyesno(
+                "Onay",
+                "Kaydedilmiş bağlantı bilgilerini silmek istediğinize emin misiniz?"
+            )
+            
+            if response:
+                success, message = SecureConfig.delete_config()
+                if success:
+                    messagebox.showinfo("Başarılı", message)
+                else:
+                    messagebox.showerror("Hata", message)
+        except Exception as e:
+            messagebox.showerror("Hata", f"Silme hatası:\n{str(e)}")
 
 
 class ComparisonFrame(ctk.CTkFrame):
@@ -735,6 +830,17 @@ class QueryEditorFrame(ctk.CTkFrame):
         )
         save_btn.pack(side="left", padx=10)
         
+        # INSERT Şablonları butonu
+        templates_btn = ctk.CTkButton(
+            top_panel,
+            text="📝 INSERT Şablonları",
+            command=self.open_templates_editor,
+            width=160,
+            fg_color="#9C27B0",
+            hover_color="#7B1FA2"
+        )
+        templates_btn.pack(side="left", padx=10)
+        
         # Sorgu editörü
         editor_frame = ctk.CTkFrame(self)
         editor_frame.pack(fill="both", expand=True, padx=10, pady=10)
@@ -877,6 +983,158 @@ class QueryEditorFrame(ctk.CTkFrame):
                 
         except Exception as e:
             messagebox.showerror("Hata", f"Kaydetme hatası:\n{str(e)}")
+    
+    def open_templates_editor(self):
+        """INSERT şablonlarını düzenle"""
+        try:
+            # Yeni pencere oluştur
+            editor_window = ctk.CTkToplevel(self)
+            editor_window.title("INSERT Şablonları Düzenleyici")
+            editor_window.geometry("900x700")
+            
+            # Başlık
+            title = ctk.CTkLabel(
+                editor_window,
+                text="SQL INSERT Şablonları",
+                font=ctk.CTkFont(size=20, weight="bold")
+            )
+            title.pack(pady=15)
+            
+            # Açıklama
+            info = ctk.CTkLabel(
+                editor_window,
+                text="Bu şablonlar stok eşitleme sırasında kullanılır. {Değişken} formatındaki alanlar otomatik doldurulur.",
+                font=ctk.CTkFont(size=12),
+                text_color="gray"
+            )
+            info.pack(pady=5)
+            
+            # Şablonları yükle
+            templates = SQLTemplates.load_templates()
+            
+            # Notebook (tabs)
+            notebook = ctk.CTkTabview(editor_window)
+            notebook.pack(fill="both", expand=True, padx=20, pady=10)
+            
+            # stk_Fis INSERT şablonu
+            tab1 = notebook.add("stk_Fis INSERT")
+            ctk.CTkLabel(
+                tab1,
+                text="stk_Fis Tablosu INSERT Şablonu:",
+                font=ctk.CTkFont(size=14, weight="bold")
+            ).pack(anchor="w", padx=10, pady=5)
+            
+            fis_text = ctk.CTkTextbox(
+                tab1,
+                font=ctk.CTkFont(family="Courier", size=11),
+                wrap="none"
+            )
+            fis_text.pack(fill="both", expand=True, padx=10, pady=10)
+            fis_text.insert("1.0", templates.get("stk_Fis_INSERT", ""))
+            
+            # stk_FisLines INSERT şablonu
+            tab2 = notebook.add("stk_FisLines INSERT")
+            ctk.CTkLabel(
+                tab2,
+                text="stk_FisLines Tablosu INSERT Şablonu:",
+                font=ctk.CTkFont(size=14, weight="bold")
+            ).pack(anchor="w", padx=10, pady=5)
+            
+            fislines_text = ctk.CTkTextbox(
+                tab2,
+                font=ctk.CTkFont(family="Courier", size=11),
+                wrap="none"
+            )
+            fislines_text.pack(fill="both", expand=True, padx=10, pady=10)
+            fislines_text.insert("1.0", templates.get("stk_FisLines_INSERT", ""))
+            
+            # Açıklamalar sekmesi
+            tab3 = notebook.add("Fiş Açıklamaları")
+            ctk.CTkLabel(
+                tab3,
+                text="Sayım Eksiği (FisTuru=51) Açıklaması:",
+                font=ctk.CTkFont(size=14, weight="bold")
+            ).pack(anchor="w", padx=10, pady=5)
+            
+            eksik_entry = ctk.CTkEntry(tab3, width=600)
+            eksik_entry.pack(padx=10, pady=5)
+            eksik_entry.insert(0, templates.get("Sayim_Eksigi_Aciklama", ""))
+            
+            ctk.CTkLabel(
+                tab3,
+                text="Sayım Fazlası (FisTuru=50) Açıklaması:",
+                font=ctk.CTkFont(size=14, weight="bold")
+            ).pack(anchor="w", padx=10, pady=(20, 5))
+            
+            fazla_entry = ctk.CTkEntry(tab3, width=600)
+            fazla_entry.pack(padx=10, pady=5)
+            fazla_entry.insert(0, templates.get("Sayim_Fazlasi_Aciklama", ""))
+            
+            # Butonlar
+            button_frame = ctk.CTkFrame(editor_window, fg_color="transparent")
+            button_frame.pack(pady=15)
+            
+            def save_templates():
+                try:
+                    new_templates = {
+                        "stk_Fis_INSERT": fis_text.get("1.0", "end-1c"),
+                        "stk_FisLines_INSERT": fislines_text.get("1.0", "end-1c"),
+                        "Sayim_Eksigi_Aciklama": eksik_entry.get(),
+                        "Sayim_Fazlasi_Aciklama": fazla_entry.get()
+                    }
+                    
+                    success, message = SQLTemplates.save_templates(new_templates)
+                    
+                    if success:
+                        messagebox.showinfo("Başarılı", "Şablonlar kaydedildi!")
+                        editor_window.destroy()
+                    else:
+                        messagebox.showerror("Hata", message)
+                except Exception as e:
+                    messagebox.showerror("Hata", f"Kayıt hatası:\n{str(e)}")
+            
+            def reset_templates():
+                response = messagebox.askyesno(
+                    "Onay",
+                    "Şablonları varsayılan değerlere sıfırlamak istediğinize emin misiniz?"
+                )
+                if response:
+                    success, message = SQLTemplates.reset_to_default()
+                    if success:
+                        messagebox.showinfo("Başarılı", "Şablonlar sıfırlandı!\nPencereyi kapatıp tekrar açın.")
+                    else:
+                        messagebox.showerror("Hata", message)
+            
+            save_btn = ctk.CTkButton(
+                button_frame,
+                text="💾 Kaydet",
+                command=save_templates,
+                width=150,
+                fg_color="green",
+                hover_color="darkgreen"
+            )
+            save_btn.pack(side="left", padx=10)
+            
+            reset_btn = ctk.CTkButton(
+                button_frame,
+                text="🔄 Varsayılana Dön",
+                command=reset_templates,
+                width=150
+            )
+            reset_btn.pack(side="left", padx=10)
+            
+            close_btn = ctk.CTkButton(
+                button_frame,
+                text="❌ Kapat",
+                command=editor_window.destroy,
+                width=150,
+                fg_color="gray",
+                hover_color="darkgray"
+            )
+            close_btn.pack(side="left", padx=10)
+            
+        except Exception as e:
+            messagebox.showerror("Hata", f"Şablon editörü açılamadı:\n{str(e)}")
 
 
 class SettingsFrame(ctk.CTkFrame):
