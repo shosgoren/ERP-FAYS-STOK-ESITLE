@@ -419,20 +419,20 @@ class DatabaseManager:
     def get_raf_ref_no(self, depo_adi, raf_adi=None):
         """stk_urungrup5 tablosundan RafRefNo al"""
         try:
+            depo_ref_no = self.get_depo_ref_no(depo_adi)
+            
             if raf_adi:
-                # Belirli raf adına göre ara
+                # Belirli raf adına göre ara (urungrubu kolonunda)
                 query = """
                 SELECT idNo 
                 FROM stk_urungrup5 
-                WHERE DepoRefNo = (SELECT idNo FROM stk_depo WHERE DepoAdi = ? OR DepoAdi COLLATE Turkish_CI_AS = ?)
-                  AND (RafAdi = ? OR RafAdi COLLATE Turkish_CI_AS = ?)
-                """
-                depo_ref_no = self.get_depo_ref_no(depo_adi)
+                WHERE DepoRefNo = ?
+                  AND (urungrubu = ? OR urungrubu COLLATE Turkish_CI_AS = ?)
+            """
                 cursor = self.conn_fays.cursor()
-                cursor.execute(query, (depo_adi, depo_adi, raf_adi, raf_adi))
+                cursor.execute(query, (depo_ref_no, raf_adi, raf_adi))
             else:
                 # Varsayılan rafı bul (depoya göre)
-                depo_ref_no = self.get_depo_ref_no(depo_adi)
                 query = """
                 SELECT TOP 1 idNo 
                 FROM stk_urungrup5 
@@ -455,10 +455,10 @@ class DatabaseManager:
             return 5346
     
     def get_raf_adi(self, raf_ref_no):
-        """RafRefNo'ya göre raf adını al"""
+        """RafRefNo'ya göre raf adını al (urungrubu kolonundan)"""
         try:
             query = """
-            SELECT RafAdi 
+            SELECT urungrubu 
             FROM stk_urungrup5 
             WHERE idNo = ?
             """
@@ -478,17 +478,18 @@ class DatabaseManager:
             return ''
     
     def get_raflar(self, depo_adi):
-        """Seçilen depoya göre raf listesini al"""
+        """Seçilen depoya göre raf listesini al (urungrubu kolonundan)"""
         try:
             depo_ref_no = self.get_depo_ref_no(depo_adi)
             
             logger.info(f"Raf listesi aranıyor - Depo: {depo_adi}, DepoRefNo: {depo_ref_no}")
             
+            # Önce DepoRefNo ile dene (urungrubu kolonundan raf adını al)
             query = """
-            SELECT idNo, RafAdi 
+            SELECT idNo, urungrubu AS RafAdi 
             FROM stk_urungrup5 
             WHERE DepoRefNo = ?
-            ORDER BY RafAdi
+            ORDER BY urungrubu
             """
             
             df = self.execute_query(query, database='FAYS', params=(depo_ref_no,))
@@ -499,17 +500,16 @@ class DatabaseManager:
             if len(df) == 0:
                 logger.warning(f"DepoRefNo={depo_ref_no} ile raf bulunamadı, depo adı ile direkt arama yapılıyor...")
                 
-                # stk_depo tablosundan tüm kolonları kontrol et
                 try:
-                    # Depo adına göre direkt JOIN yap
+                    # Depo adına göre direkt JOIN yap (urungrubu kolonundan)
                     query2 = """
-                    SELECT DISTINCT R.idNo, R.RafAdi 
+                    SELECT DISTINCT R.idNo, R.urungrubu AS RafAdi 
                     FROM stk_urungrup5 R
                     INNER JOIN stk_depo D ON R.DepoRefNo = D.idNo
                     WHERE (D.DepoAdi = ? OR D.DepoAdi COLLATE Turkish_CI_AS = ?)
                        OR (D.Depo = ? OR D.Depo COLLATE Turkish_CI_AS = ?)
                        OR (D.Name = ? OR D.Name COLLATE Turkish_CI_AS = ?)
-                    ORDER BY R.RafAdi
+                    ORDER BY R.urungrubu
                     """
                     df = self.execute_query(query2, database='FAYS', params=(depo_adi, depo_adi, depo_adi, depo_adi, depo_adi, depo_adi))
                     logger.info(f"Depo adı ile direkt JOIN sonucu: {len(df)} kayıt bulundu")
@@ -520,17 +520,19 @@ class DatabaseManager:
             raflar = []
             if len(df) > 0:
                 for _, row in df.iterrows():
-                    raflar.append({
-                        'idNo': int(row['idNo']),
-                        'RafAdi': row['RafAdi'] if pd.notna(row['RafAdi']) else ''
-                    })
+                    raf_adi = row['RafAdi'] if pd.notna(row['RafAdi']) else ''
+                    if raf_adi:  # Boş olmayan rafları ekle
+                        raflar.append({
+                            'idNo': int(row['idNo']),
+                            'RafAdi': raf_adi
+                        })
             
             if len(raflar) == 0:
                 # Debug: DepoRefNo ile kaç raf var kontrol et
                 debug_query = """
                 SELECT COUNT(*) as ToplamRaf 
                 FROM stk_urungrup5 
-                WHERE DepoRefNo = ?
+                WHERE DepoRefNo = ? AND urungrubu IS NOT NULL AND urungrubu <> ''
                 """
                 cursor = self.conn_fays.cursor()
                 cursor.execute(debug_query, (depo_ref_no,))
@@ -544,8 +546,9 @@ class DatabaseManager:
                     
                     # Tüm rafları listele (debug)
                     debug_query2 = """
-                    SELECT TOP 10 DepoRefNo, idNo, RafAdi 
+                    SELECT TOP 10 DepoRefNo, idNo, urungrubu 
                     FROM stk_urungrup5 
+                    WHERE urungrubu IS NOT NULL AND urungrubu <> ''
                     ORDER BY DepoRefNo
                     """
                     df_debug = self.execute_query(debug_query2, database='FAYS')
