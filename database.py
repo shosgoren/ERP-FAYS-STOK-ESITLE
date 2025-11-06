@@ -291,6 +291,15 @@ class DatabaseManager:
             if raf_adi is None and raf_ref_no:
                 raf_adi = self.get_raf_adi(raf_ref_no)
             
+            # BarkodNo boşsa veya None ise stk_Kart tablosundan otomatik al
+            if not barkod_no or barkod_no.strip() == '':
+                if stok_ref_no:
+                    barkod_no = self.get_barkod_no(stok_ref_no)
+                    logger.info(f"BarkodNo otomatik alındı - StokKodu: {stok_kodu}, StokRefNo: {stok_ref_no}, BarkodNo: {barkod_no}")
+                else:
+                    logger.warning(f"BarkodNo alınamadı - StokRefNo yok: {stok_kodu}")
+                    barkod_no = ''
+            
             query = """
             INSERT INTO stk_FisLines (
                 Link_FisNo, StokKodu, BarkodNo, NetMiktar, BrutMiktar, BirimFiyat,
@@ -586,6 +595,34 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"FAYS StokRefNo alma hatası: {e}")
             return None
+    
+    def get_barkod_no(self, stok_ref_no):
+        """stk_Kart tablosundan BarkodNo al (StokRefNo ile)"""
+        try:
+            if stok_ref_no is None:
+                return ''
+            
+            query = """
+            SELECT BarkodNo 
+            FROM stk_Kart 
+            WHERE idNo = ?
+            """
+            
+            cursor = self.conn_fays.cursor()
+            cursor.execute(query, (stok_ref_no,))
+            row = cursor.fetchone()
+            cursor.close()
+            
+            if row and row[0]:
+                barkod_no = str(row[0]).strip()
+                logger.info(f"BarkodNo bulundu - StokRefNo: {stok_ref_no}, BarkodNo: {barkod_no}")
+                return barkod_no
+            else:
+                logger.warning(f"BarkodNo bulunamadı - StokRefNo: {stok_ref_no}")
+                return ''
+        except Exception as e:
+            logger.error(f"BarkodNo alma hatası: {e}")
+            return ''
     
     def get_fays_stocks_with_raf(self, depo_adi):
         """FAYS özet raporda bulunan stokları raf bilgisiyle birlikte al"""
