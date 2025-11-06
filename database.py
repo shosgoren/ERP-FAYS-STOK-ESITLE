@@ -417,30 +417,30 @@ class DatabaseManager:
             return 1
     
     def get_raf_ref_no(self, depo_adi, raf_adi=None):
-        """stk_urungrup5 tablosundan RafRefNo al"""
+        """stk_urungrup5 tablosundan RafRefNo al (depo kolonu ile)"""
         try:
-            depo_ref_no = self.get_depo_ref_no(depo_adi)
-            
             if raf_adi:
-                # Belirli raf adına göre ara (urungrubu kolonunda)
+                # Belirli raf adına göre ara (depo ve urungrubu kolonları ile)
                 query = """
                 SELECT idNo 
                 FROM stk_urungrup5 
-                WHERE DepoRefNo = ?
+                WHERE (depo = ? OR depo COLLATE Turkish_CI_AS = ?)
                   AND (urungrubu = ? OR urungrubu COLLATE Turkish_CI_AS = ?)
-            """
+                """
                 cursor = self.conn_fays.cursor()
-                cursor.execute(query, (depo_ref_no, raf_adi, raf_adi))
+                cursor.execute(query, (depo_adi, depo_adi, raf_adi, raf_adi))
             else:
                 # Varsayılan rafı bul (depoya göre)
                 query = """
                 SELECT TOP 1 idNo 
                 FROM stk_urungrup5 
-                WHERE DepoRefNo = ?
+                WHERE (depo = ? OR depo COLLATE Turkish_CI_AS = ?)
+                  AND urungrubu IS NOT NULL 
+                  AND urungrubu <> ''
                 ORDER BY idNo
                 """
                 cursor = self.conn_fays.cursor()
-                cursor.execute(query, (depo_ref_no,))
+                cursor.execute(query, (depo_adi, depo_adi))
             
             row = cursor.fetchone()
             cursor.close()
@@ -478,43 +478,23 @@ class DatabaseManager:
             return ''
     
     def get_raflar(self, depo_adi):
-        """Seçilen depoya göre raf listesini al (urungrubu kolonundan)"""
+        """Seçilen depoya göre raf listesini al (stk_urungrup5 tablosundan direkt)"""
         try:
-            depo_ref_no = self.get_depo_ref_no(depo_adi)
+            logger.info(f"Raf listesi aranıyor - Depo: {depo_adi}")
             
-            logger.info(f"Raf listesi aranıyor - Depo: {depo_adi}, DepoRefNo: {depo_ref_no}")
-            
-            # Önce DepoRefNo ile dene (urungrubu kolonundan raf adını al)
+            # stk_urungrup5 tablosunda depo kolonu ile direkt arama yap
             query = """
-            SELECT idNo, urungrubu AS RafAdi 
+            SELECT DISTINCT idNo, urungrubu AS RafAdi, DepoRefNo 
             FROM stk_urungrup5 
-            WHERE DepoRefNo = ?
+            WHERE (depo = ? OR depo COLLATE Turkish_CI_AS = ?)
+              AND urungrubu IS NOT NULL 
+              AND urungrubu <> ''
             ORDER BY urungrubu
             """
             
-            df = self.execute_query(query, database='FAYS', params=(depo_ref_no,))
+            df = self.execute_query(query, database='FAYS', params=(depo_adi, depo_adi))
             
-            logger.info(f"stk_urungrup5 sorgusu sonucu (DepoRefNo={depo_ref_no}): {len(df)} kayıt bulundu")
-            
-            # Eğer DepoRefNo ile bulunamazsa, depo adı ile direkt JOIN yap
-            if len(df) == 0:
-                logger.warning(f"DepoRefNo={depo_ref_no} ile raf bulunamadı, depo adı ile direkt arama yapılıyor...")
-                
-                try:
-                    # Depo adına göre direkt JOIN yap (urungrubu kolonundan)
-                    query2 = """
-                    SELECT DISTINCT R.idNo, R.urungrubu AS RafAdi 
-                    FROM stk_urungrup5 R
-                    INNER JOIN stk_depo D ON R.DepoRefNo = D.idNo
-                    WHERE (D.DepoAdi = ? OR D.DepoAdi COLLATE Turkish_CI_AS = ?)
-                       OR (D.Depo = ? OR D.Depo COLLATE Turkish_CI_AS = ?)
-                       OR (D.Name = ? OR D.Name COLLATE Turkish_CI_AS = ?)
-                    ORDER BY R.urungrubu
-                    """
-                    df = self.execute_query(query2, database='FAYS', params=(depo_adi, depo_adi, depo_adi, depo_adi, depo_adi, depo_adi))
-                    logger.info(f"Depo adı ile direkt JOIN sonucu: {len(df)} kayıt bulundu")
-                except Exception as e2:
-                    logger.error(f"Depo adı ile JOIN arama hatası: {e2}")
+            logger.info(f"stk_urungrup5 sorgusu sonucu (depo={depo_adi}): {len(df)} kayıt bulundu")
             
             # DataFrame'den liste oluştur [(idNo, RafAdi), ...]
             raflar = []
@@ -524,36 +504,40 @@ class DatabaseManager:
                     if raf_adi:  # Boş olmayan rafları ekle
                         raflar.append({
                             'idNo': int(row['idNo']),
-                            'RafAdi': raf_adi
+                            'RafAdi': raf_adi,
+                            'DepoRefNo': int(row['DepoRefNo']) if pd.notna(row['DepoRefNo']) else None
                         })
             
             if len(raflar) == 0:
-                # Debug: DepoRefNo ile kaç raf var kontrol et
+                logger.warning(f"Depo '{depo_adi}' için hiç raf bulunamadı!")
+                
+                # Debug: Bu depo için kaç kayıt var kontrol et
                 debug_query = """
-                SELECT COUNT(*) as ToplamRaf 
+                SELECT COUNT(*) as ToplamKayit 
                 FROM stk_urungrup5 
-                WHERE DepoRefNo = ? AND urungrubu IS NOT NULL AND urungrubu <> ''
+                WHERE (depo = ? OR depo COLLATE Turkish_CI_AS = ?)
                 """
                 cursor = self.conn_fays.cursor()
-                cursor.execute(debug_query, (depo_ref_no,))
+                cursor.execute(debug_query, (depo_adi, depo_adi))
                 count_row = cursor.fetchone()
                 cursor.close()
                 
                 if count_row and count_row[0] > 0:
-                    logger.warning(f"DepoRefNo={depo_ref_no} için {count_row[0]} raf var ama sorgu sonuç vermedi!")
+                    logger.warning(f"Depo '{depo_adi}' için {count_row[0]} kayıt var ama urungrubu boş!")
                 else:
-                    logger.warning(f"DepoRefNo={depo_ref_no} için hiç raf bulunamadı!")
+                    logger.warning(f"Depo '{depo_adi}' için hiç kayıt bulunamadı!")
                     
-                    # Tüm rafları listele (debug)
+                    # Tüm depo isimlerini listele (debug)
                     debug_query2 = """
-                    SELECT TOP 10 DepoRefNo, idNo, urungrubu 
+                    SELECT DISTINCT TOP 10 depo 
                     FROM stk_urungrup5 
-                    WHERE urungrubu IS NOT NULL AND urungrubu <> ''
-                    ORDER BY DepoRefNo
+                    WHERE depo IS NOT NULL AND depo <> ''
+                    ORDER BY depo
                     """
                     df_debug = self.execute_query(debug_query2, database='FAYS')
                     if len(df_debug) > 0:
-                        logger.warning(f"Mevcut raflar (ilk 10): {df_debug.to_dict('records')}")
+                        mevcut_depolar = [row['depo'] for _, row in df_debug.iterrows()]
+                        logger.warning(f"Mevcut depo isimleri (ilk 10): {mevcut_depolar}")
             
             logger.info(f"{depo_adi} deposu için {len(raflar)} adet raf bulundu")
             return raflar
