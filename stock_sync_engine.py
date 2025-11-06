@@ -6,6 +6,7 @@ import logging
 from datetime import datetime
 from database import DatabaseManager
 from config import Config
+from sql_templates import SQLTemplates
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +154,8 @@ class StockSyncEngine:
             fisno = self.db.get_next_fisno()
             
             # Çıkış fişi (FisTuru=51, GirisCikis=2)
-            aciklama = "0.KAT:FAYS STOKLARINI SIFIRLAMA İŞLEMİ"
+            # Açıklamayı şablonlardan al
+            aciklama = SQLTemplates.get_aciklama(Config.FIS_SAYIM_EKSIGI)
             
             # Ana fiş kaydı oluştur
             fis_idno = self.db.create_fis_record(
@@ -251,7 +253,8 @@ class StockSyncEngine:
             fisno = self.db.get_next_fisno()
             
             # Giriş fişi (FisTuru=50, GirisCikis=1)
-            aciklama = "0.KAT:LOGO STOKLARINA GÖRE SAYIM FAZLASI GİRİŞİ"
+            # Açıklamayı şablonlardan al
+            aciklama = SQLTemplates.get_aciklama(Config.FIS_SAYIM_FAZLASI)
             
             # Ana fiş kaydı oluştur
             fis_idno = self.db.create_fis_record(
