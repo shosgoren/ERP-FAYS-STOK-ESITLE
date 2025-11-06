@@ -698,7 +698,7 @@ class SyncFrame(ctk.CTkFrame):
                 messagebox.showwarning("Uyarı", "Önce bir depo seçmelisiniz!")
                 return
             
-            raflar = self.db_manager.get_raflar(warehouse)
+            raflar = self.sync_engine.db.get_raflar(warehouse)
             
             if raflar:
                 # ComboBox için format: "RafAdi (idNo)"
