@@ -195,8 +195,8 @@ INSERT INTO yr_BilgiLines (Link_Numara, Deger) VALUES (99102, 1067968);
 
 -- Test Fişleri (Mevcut stok hareketleri)
 -- Giriş Fişi
-INSERT INTO stk_Fis (FisTuru, FisNo, GirisCikis, Tarih, Aciklamalar, Grup3, Status, DepoRefNo, Islemvar, IslemKullanici, IadeKontrol, DevamDurumu)
-VALUES (10, 1000001, 1, '2025-01-01', 'İLK GİRİŞ', 'MERKEZ', 0, 1, 0, 0, 0, 3);
+INSERT INTO stk_Fis (FisTuru, FisNo, GirisCikis, Tarih, FirmaKodu, FirmaAdi, Aciklamalar, Grup3, Status, DepoRefNo, Islemvar, IslemKullanici, IadeKontrol, DevamDurumu)
+VALUES (10, 1000001, 1, '2025-01-01', '', '', 'İLK GİRİŞ', 'MERKEZ', 0, 1, 0, 0, 0, 3);
 
 -- Fiş Satırları (FAYS stokları - LOGO'dan farklı olacak şekilde)
 -- 61007030: LOGO'da 100, FAYS'da 120 olacak (20 fazla - sayım eksiği gerekecek)

@@ -203,21 +203,45 @@ BEGIN
                     0, 0.00, 0.00, 0.00, 0.00, 0, 0, 1, 0, 0, 0, 3);
             
             -- Satırları ekle
-            INSERT INTO stk_FisLines (Link_FisNo, StokKodu, NetMiktar, Depo, UrunGrup1, MiktarBirimi,
-                                     StokRefNo, DepoRefNo, RafRefNo, GUIDX, KULLANICI, SatirNo)
+            INSERT INTO stk_FisLines (
+                Link_FisNo, StokKodu, BarkodNo, NetMiktar, BrutMiktar, BirimFiyat,
+                Depo, UrunGrup1, MiktarBirimi, KdvORani, YBrutMiktar, YDara,
+                Miktar1, Miktar2, Miktar3, Miktar4, Miktar5, AraToplamLines,
+                En, Boy, Yukseklik, Agirlik, Desi, SevkEdildi, AmbalajMiktar,
+                indirimtutari, KoliDara, BobinDara, TBobinDara, SatirNo,
+                StokRefNo, DepoRefNo, RafRefNo, StokTuru, EtiketKontrol,
+                IslemTipi, TransLinesIdno, GUIDX, KULLANICI
+            )
             SELECT 
                 @FisNoEksik,
                 MalzemeKodu,
-                ABS(Fark),
+                '', -- BarkodNo
+                ABS(Fark), -- NetMiktar
+                0, -- BrutMiktar
+                0.00, -- BirimFiyat
                 @Depo,
                 MalzemeAdi,
                 'ADET',
+                0, -- KdvORani
+                0, -- YBrutMiktar
+                0, -- YDara
+                0, 0, 0, 0, 0, -- Miktar1-5
+                0.00, -- AraToplamLines
+                0, 0, 0, 0, 0, -- En, Boy, Yukseklik, Agirlik, Desi
+                0, -- SevkEdildi
+                1, -- AmbalajMiktar
+                0.00, -- indirimtutari
+                0, 0, 0, -- KoliDara, BobinDara, TBobinDara
+                ROW_NUMBER() OVER (ORDER BY MalzemeKodu), -- SatirNo
                 StokRefNo,
-                1,
-                5346,
-                CAST(@FisNoEksik AS VARCHAR) + CAST(ROW_NUMBER() OVER (ORDER BY MalzemeKodu) AS VARCHAR),
-                8215,
-                ROW_NUMBER() OVER (ORDER BY MalzemeKodu)
+                1, -- DepoRefNo
+                5346, -- RafRefNo
+                0, -- StokTuru
+                0, -- EtiketKontrol
+                0, -- IslemTipi
+                0, -- TransLinesIdno
+                CAST(@FisNoEksik AS VARCHAR) + CAST(ROW_NUMBER() OVER (ORDER BY MalzemeKodu) AS VARCHAR), -- GUIDX
+                8215 -- KULLANICI
             FROM #StokFarklari WHERE Fark > 0;
             
             SET @ToplamEksik = @@ROWCOUNT;
@@ -243,21 +267,45 @@ BEGIN
                     0, 0.00, 0.00, 0.00, 0.00, 0, 0, 1, 0, 0, 0, 3);
             
             -- Satırları ekle
-            INSERT INTO stk_FisLines (Link_FisNo, StokKodu, NetMiktar, Depo, UrunGrup1, MiktarBirimi,
-                                     StokRefNo, DepoRefNo, RafRefNo, GUIDX, KULLANICI, SatirNo)
+            INSERT INTO stk_FisLines (
+                Link_FisNo, StokKodu, BarkodNo, NetMiktar, BrutMiktar, BirimFiyat,
+                Depo, UrunGrup1, MiktarBirimi, KdvORani, YBrutMiktar, YDara,
+                Miktar1, Miktar2, Miktar3, Miktar4, Miktar5, AraToplamLines,
+                En, Boy, Yukseklik, Agirlik, Desi, SevkEdildi, AmbalajMiktar,
+                indirimtutari, KoliDara, BobinDara, TBobinDara, SatirNo,
+                StokRefNo, DepoRefNo, RafRefNo, StokTuru, EtiketKontrol,
+                IslemTipi, TransLinesIdno, GUIDX, KULLANICI
+            )
             SELECT 
                 @FisNoFazla,
                 MalzemeKodu,
-                ABS(Fark),
+                '', -- BarkodNo
+                ABS(Fark), -- NetMiktar
+                0, -- BrutMiktar
+                0.00, -- BirimFiyat
                 @Depo,
                 MalzemeAdi,
                 'ADET',
+                0, -- KdvORani
+                0, -- YBrutMiktar
+                0, -- YDara
+                0, 0, 0, 0, 0, -- Miktar1-5
+                0.00, -- AraToplamLines
+                0, 0, 0, 0, 0, -- En, Boy, Yukseklik, Agirlik, Desi
+                0, -- SevkEdildi
+                1, -- AmbalajMiktar
+                0.00, -- indirimtutari
+                0, 0, 0, -- KoliDara, BobinDara, TBobinDara
+                ROW_NUMBER() OVER (ORDER BY MalzemeKodu), -- SatirNo
                 StokRefNo,
-                1,
-                5346,
-                CAST(@FisNoFazla AS VARCHAR) + CAST(ROW_NUMBER() OVER (ORDER BY MalzemeKodu) AS VARCHAR),
-                8215,
-                ROW_NUMBER() OVER (ORDER BY MalzemeKodu)
+                1, -- DepoRefNo
+                5346, -- RafRefNo
+                0, -- StokTuru
+                0, -- EtiketKontrol
+                0, -- IslemTipi
+                0, -- TransLinesIdno
+                CAST(@FisNoFazla AS VARCHAR) + CAST(ROW_NUMBER() OVER (ORDER BY MalzemeKodu) AS VARCHAR), -- GUIDX
+                8215 -- KULLANICI
             FROM #StokFarklari WHERE Fark < 0;
             
             SET @ToplamFazla = @@ROWCOUNT;
