@@ -335,6 +335,16 @@ class DatabaseManager:
     def get_depo_ref_no(self, depo_adi):
         """stk_depo tablosundan DepoRefNo al"""
         try:
+            # Önce tablo yapısını kontrol et (debug)
+            try:
+                cursor = self.conn_fays.cursor()
+                cursor.execute("SELECT TOP 1 * FROM stk_depo")
+                columns = [column[0] for column in cursor.description]
+                cursor.close()
+                logger.info(f"stk_depo tablosu kolonları: {columns}")
+            except:
+                pass
+            
             # Önce DepoAdi kolonu ile dene
             query = """
             SELECT idNo 
@@ -367,20 +377,43 @@ class DatabaseManager:
                 logger.info(f"DepoRefNo bulundu (Depo kolonu ile): {depo_adi} -> {depo_ref_no}")
                 return depo_ref_no
             
-            # Hiçbir şey bulunamazsa tüm depoları listele (debug için)
-            query3 = "SELECT TOP 10 idNo, DepoAdi, Depo FROM stk_depo"
-            cursor.execute(query3)
-            rows = cursor.fetchall()
-            cursor.close()
+            # Name kolonu ile de dene (LOGO'daki gibi)
+            query3 = """
+            SELECT idNo 
+            FROM stk_depo 
+            WHERE Name = ? OR Name COLLATE Turkish_CI_AS = ?
+            """
+            cursor.execute(query3, (depo_adi, depo_adi))
+            row = cursor.fetchone()
             
-            logger.warning(f"DepoRefNo bulunamadı: {depo_adi}")
-            if rows:
-                logger.warning(f"Mevcut depolar: {[str(r) for r in rows]}")
+            if row:
+                cursor.close()
+                depo_ref_no = int(row[0])
+                logger.info(f"DepoRefNo bulundu (Name kolonu ile): {depo_adi} -> {depo_ref_no}")
+                return depo_ref_no
+            
+            # Hiçbir şey bulunamazsa tüm depoları listele (debug için)
+            query4 = "SELECT TOP 10 idNo, DepoAdi, Depo, Name FROM stk_depo"
+            try:
+                cursor.execute(query4)
+                rows = cursor.fetchall()
+                logger.warning(f"DepoRefNo bulunamadı: {depo_adi}")
+                if rows:
+                    logger.warning(f"Mevcut depolar: {[str(r) for r in rows]}")
+            except:
+                # Kolonlar yoksa sadece idNo ile dene
+                query5 = "SELECT TOP 10 idNo FROM stk_depo"
+                cursor.execute(query5)
+                rows = cursor.fetchall()
+                logger.warning(f"DepoRefNo bulunamadı: {depo_adi}")
+                logger.warning(f"Mevcut depo idNo'ları: {[r[0] for r in rows]}")
+            finally:
+                cursor.close()
             
             logger.warning(f"Varsayılan DepoRefNo=1 kullanılıyor")
             return 1
         except Exception as e:
-            logger.error(f"DepoRefNo alma hatası: {e}")
+            logger.error(f"DepoRefNo alma hatası: {e}", exc_info=True)
             return 1
     
     def get_raf_ref_no(self, depo_adi, raf_adi=None):
