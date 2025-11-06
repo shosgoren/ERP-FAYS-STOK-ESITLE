@@ -196,6 +196,13 @@ class StockSyncEngine:
                         # LOGO'dan al (fallback)
                         stok_ref_no = self._get_stok_ref_no(row['Ürün Kodu'])
                 
+                # Raf adını al (FAYS özet raporda varsa kullan)
+                raf_adi = None
+                if 'Raf Adı' in row and pd.notna(row['Raf Adı']):
+                    raf_adi = str(row['Raf Adı']).strip()
+                elif raf_ref_no:
+                    raf_adi = self.db.get_raf_adi(raf_ref_no)
+                
                 self.db.create_fislines_record(
                     link_fisno=fisno,
                     stok_kodu=row['Ürün Kodu'],
@@ -206,7 +213,8 @@ class StockSyncEngine:
                     grup_kodu=row.get('Grup Kodu', ''),
                     stok_ref_no=stok_ref_no,
                     depo_ref_no=depo_ref_no,
-                    raf_ref_no=raf_ref_no
+                    raf_ref_no=raf_ref_no,
+                    raf_adi=raf_adi
                 )
                 lines_created += 1
             
@@ -274,6 +282,11 @@ class StockSyncEngine:
                 if fays_stok_ref_no:
                     stok_ref_no = fays_stok_ref_no
                 
+                # Raf adını al
+                raf_adi = None
+                if raf_ref_no:
+                    raf_adi = self.db.get_raf_adi(raf_ref_no)
+                
                 self.db.create_fislines_record(
                     link_fisno=fisno,
                     stok_kodu=row['MALZEME KODU'],
@@ -284,7 +297,8 @@ class StockSyncEngine:
                     grup_kodu=row.get('GRUP KODU', ''),
                     stok_ref_no=stok_ref_no,
                     depo_ref_no=None,  # Otomatik alınacak
-                    raf_ref_no=raf_ref_no
+                    raf_ref_no=raf_ref_no,
+                    raf_adi=raf_adi
                 )
                 lines_created += 1
             

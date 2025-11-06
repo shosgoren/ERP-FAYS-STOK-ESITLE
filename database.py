@@ -235,6 +235,7 @@ class DatabaseManager:
     def create_fis_record(self, fisno, fis_turu, giris_cikis, depo, aciklama, depo_ref_no=None):
         """stk_Fis tablosuna kayıt oluştur"""
         try:
+            # Tarih formatı: YYYY-MM-DD (Yıl-Ay-Gün)
             tarih = datetime.now().strftime('%Y-%m-%d')
             
             # DepoRefNo yoksa stk_depo tablosundan al
@@ -272,7 +273,7 @@ class DatabaseManager:
             raise
     
     def create_fislines_record(self, link_fisno, stok_kodu, barkod_no, net_miktar, 
-                              depo, urun_grup1, grup_kodu, stok_ref_no, depo_ref_no=None, raf_ref_no=None):
+                              depo, urun_grup1, grup_kodu, stok_ref_no, depo_ref_no=None, raf_ref_no=None, raf_adi=None):
         """stk_FisLines tablosuna kayıt oluştur"""
         try:
             # GUIDX oluştur
@@ -286,10 +287,14 @@ class DatabaseManager:
             if raf_ref_no is None:
                 raf_ref_no = 5346  # Varsayılan raf
             
+            # Raf adını al (raf_ref_no'dan veya parametreden)
+            if raf_adi is None and raf_ref_no:
+                raf_adi = self.get_raf_adi(raf_ref_no)
+            
             query = """
             INSERT INTO stk_FisLines (
                 Link_FisNo, StokKodu, BarkodNo, NetMiktar, BrutMiktar, BirimFiyat,
-                Depo, UrunGrup1, MiktarBirimi, KdvORani, YBrutMiktar, YDara,
+                Depo, UrunGrup1, UrunGrup5, MiktarBirimi, KdvORani, YBrutMiktar, YDara,
                 Miktar1, Miktar2, Miktar3, Miktar4, Miktar5, AraToplamLines,
                 En, Boy, Yukseklik, Agirlik, Desi, SevkEdildi, AmbalajMiktar,
                 indirimtutari, KoliDara, BobinDara, TBobinDara, SatirNo,
@@ -297,7 +302,7 @@ class DatabaseManager:
                 IslemTipi, TransLinesIdno, GUIDX, KULLANICI
             ) VALUES (
                 ?, ?, ?, ?, 0, 0.00,
-                ?, ?, 'ADET', 0, 0, 0,
+                ?, ?, ?, 'ADET', 0, 0, 0,
                 0, 0, 0, 0, 0, 0.00,
                 0, 0, 0, 0, 0, 0, 1,
                 0.00, 0, 0, 0, 1,
@@ -308,7 +313,7 @@ class DatabaseManager:
             
             params = (
                 link_fisno, stok_kodu, barkod_no, net_miktar,
-                depo, urun_grup1, stok_ref_no, depo_ref_no, raf_ref_no, guidx
+                depo, urun_grup1, raf_adi or '', stok_ref_no, depo_ref_no, raf_ref_no, guidx
             )
             
             cursor = self.conn_fays.cursor()
@@ -387,6 +392,58 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"RafRefNo alma hatası: {e}")
             return 5346
+    
+    def get_raf_adi(self, raf_ref_no):
+        """RafRefNo'ya göre raf adını al"""
+        try:
+            query = """
+            SELECT RafAdi 
+            FROM stk_urungrup5 
+            WHERE idNo = ?
+            """
+            
+            cursor = self.conn_fays.cursor()
+            cursor.execute(query, (raf_ref_no,))
+            row = cursor.fetchone()
+            cursor.close()
+            
+            if row:
+                return row[0] if row[0] else ''
+            else:
+                logger.warning(f"Raf adı bulunamadı - RafRefNo: {raf_ref_no}")
+                return ''
+        except Exception as e:
+            logger.error(f"Raf adı alma hatası: {e}")
+            return ''
+    
+    def get_raflar(self, depo_adi):
+        """Seçilen depoya göre raf listesini al"""
+        try:
+            depo_ref_no = self.get_depo_ref_no(depo_adi)
+            
+            query = """
+            SELECT idNo, RafAdi 
+            FROM stk_urungrup5 
+            WHERE DepoRefNo = ?
+            ORDER BY RafAdi
+            """
+            
+            df = self.execute_query(query, database='FAYS', params=(depo_ref_no,))
+            
+            # DataFrame'den liste oluştur [(idNo, RafAdi), ...]
+            raflar = []
+            if len(df) > 0:
+                for _, row in df.iterrows():
+                    raflar.append({
+                        'idNo': int(row['idNo']),
+                        'RafAdi': row['RafAdi'] if pd.notna(row['RafAdi']) else ''
+                    })
+            
+            logger.info(f"{depo_adi} deposu için {len(raflar)} adet raf bulundu")
+            return raflar
+        except Exception as e:
+            logger.error(f"Raf listesi alma hatası: {e}")
+            return []
     
     def get_stok_ref_no_fays(self, stok_kodu):
         """stk_kart tablosundan StokRefNo al (FAYS)"""

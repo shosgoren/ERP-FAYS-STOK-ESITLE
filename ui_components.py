@@ -581,7 +581,8 @@ class SyncFrame(ctk.CTkFrame):
             settings_frame,
             values=[Config.DEFAULT_WAREHOUSE],
             width=300,
-            font=ctk.CTkFont(size=14)
+            font=ctk.CTkFont(size=14),
+            command=self.on_warehouse_changed
         )
         self.warehouse_combo.pack(pady=10)
         self.warehouse_combo.set(Config.DEFAULT_WAREHOUSE)
@@ -594,6 +595,35 @@ class SyncFrame(ctk.CTkFrame):
             width=200
         )
         refresh_btn.pack(pady=10)
+        
+        # Raf seçimi (Sayım Fazlası için)
+        ctk.CTkLabel(
+            settings_frame,
+            text="Sayım Fazlası Rafı (LOGO stokları için):",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(pady=(20, 5))
+        
+        self.raf_combo = ctk.CTkComboBox(
+            settings_frame,
+            values=["Raf seçmek için depo seçin..."],
+            width=300,
+            font=ctk.CTkFont(size=14),
+            state="disabled",
+            command=self.on_raf_changed
+        )
+        self.raf_combo.pack(pady=5)
+        
+        # Raf yükle butonu
+        self.load_rafs_btn = ctk.CTkButton(
+            settings_frame,
+            text="🔄 Rafları Yükle",
+            command=self.load_rafs,
+            width=200,
+            state="disabled"
+        )
+        self.load_rafs_btn.pack(pady=5)
+        
+        self.selected_raf_ref_no = None
         
         # Önizleme butonu
         preview_btn = ctk.CTkButton(
@@ -643,8 +673,60 @@ class SyncFrame(ctk.CTkFrame):
             if warehouses:
                 self.warehouse_combo.configure(values=warehouses)
                 messagebox.showinfo("Başarılı", f"{len(warehouses)} depo yüklendi")
+                # Depo seçildiğinde rafları yükle
+                self.on_warehouse_changed(self.warehouse_combo.get())
         except Exception as e:
             messagebox.showerror("Hata", f"Depo listesi yüklenemedi:\n{str(e)}")
+    
+    def on_warehouse_changed(self, warehouse):
+        """Depo değiştiğinde rafları yükle"""
+        if warehouse and warehouse != "Tümü":
+            self.load_rafs_btn.configure(state="normal")
+            self.raf_combo.configure(state="normal")
+            self.load_rafs()
+        else:
+            self.load_rafs_btn.configure(state="disabled")
+            self.raf_combo.configure(state="disabled")
+            self.raf_combo.configure(values=["Raf seçmek için depo seçin..."])
+            self.selected_raf_ref_no = None
+    
+    def load_rafs(self):
+        """Seçilen depoya göre rafları yükle"""
+        try:
+            warehouse = self.warehouse_combo.get()
+            if not warehouse or warehouse == "Tümü":
+                messagebox.showwarning("Uyarı", "Önce bir depo seçmelisiniz!")
+                return
+            
+            raflar = self.db_manager.get_raflar(warehouse)
+            
+            if raflar:
+                # ComboBox için format: "RafAdi (idNo)"
+                raf_values = [f"{raf['RafAdi']} ({raf['idNo']})" for raf in raflar]
+                self.raf_combo.configure(values=raf_values)
+                
+                # İlk rafı seç
+                if raf_values:
+                    self.raf_combo.set(raf_values[0])
+                    self.selected_raf_ref_no = raflar[0]['idNo']
+                
+                messagebox.showinfo("Başarılı", f"{len(raflar)} adet raf yüklendi")
+            else:
+                self.raf_combo.configure(values=["Bu depoda raf bulunamadı"])
+                self.selected_raf_ref_no = None
+                messagebox.showwarning("Uyarı", "Bu depoda raf bulunamadı!")
+        except Exception as e:
+            messagebox.showerror("Hata", f"Raf listesi yüklenemedi:\n{str(e)}")
+    
+    def on_raf_changed(self, raf_text):
+        """Raf seçildiğinde RafRefNo'yu kaydet"""
+        if raf_text and "(" in raf_text and ")" in raf_text:
+            try:
+                # "RafAdi (idNo)" formatından idNo'yu çıkar
+                idno_str = raf_text.split("(")[1].split(")")[0]
+                self.selected_raf_ref_no = int(idno_str)
+            except:
+                self.selected_raf_ref_no = None
     
     def preview_sync(self):
         """Eşitleme önizlemesi yap"""
@@ -718,8 +800,21 @@ class SyncFrame(ctk.CTkFrame):
             self.result_text.insert("end", f"Başlangıç: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
             self.update()
             
+            # Raf seçimi kontrolü
+            if not self.selected_raf_ref_no:
+                response = messagebox.askyesno(
+                    "Raf Seçimi",
+                    "Sayım fazlası için raf seçilmedi!\n\n"
+                    "Varsayılan raf kullanılacak. Devam etmek istiyor musunuz?"
+                )
+                if not response:
+                    return
+                raf_ref_no = None
+            else:
+                raf_ref_no = self.selected_raf_ref_no
+            
             # Eşitleme yap
-            result = self.sync_engine.synchronize_stocks(warehouse)
+            result = self.sync_engine.synchronize_stocks(warehouse, default_raf_ref_no=raf_ref_no)
             
             if result['success']:
                 self.result_text.insert("end", f"\n✓ EŞİTLEME BAŞARILI!\n\n")
