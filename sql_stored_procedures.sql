@@ -194,10 +194,12 @@ BEGIN
             UPDATE yr_BilgiLines SET Deger = @FisNoEksik WHERE Link_Numara = 99102;
             
             -- Ana fiş oluştur
-            INSERT INTO stk_Fis (FisTuru, FisNo, GirisCikis, Tarih, Aciklamalar, Grup3, 
-                                KdvOrani, AraToplam, calcGenelToplam, DovizKuru, KdvDegeri,
-                                LogoKontrol, Status, DepoRefNo, Islemvar, IslemKullanici, IadeKontrol, DevamDurumu)
-            VALUES (51, @FisNoEksik, 2, @Tarih, '0.KAT:SAYILMAYAN VE STOKTA FAZLA OLAN STOKLAR', @Depo,
+            INSERT INTO stk_Fis (FisTuru, FisNo, GirisCikis, Tarih, FirmaKodu, FirmaAdi,
+                                Aciklamalar, Grup3, KdvOrani, AraToplam, calcGenelToplam, 
+                                DovizKuru, KdvDegeri, LogoKontrol, Status, DepoRefNo, 
+                                Islemvar, IslemKullanici, IadeKontrol, DevamDurumu)
+            VALUES (51, @FisNoEksik, 2, @Tarih, '', '', 
+                    '0.KAT:SAYILMAYAN VE STOKTA FAZLA OLAN STOKLAR', @Depo,
                     0, 0.00, 0.00, 0.00, 0.00, 0, 0, 1, 0, 0, 0, 3);
             
             -- Satırları ekle
@@ -232,10 +234,12 @@ BEGIN
             UPDATE yr_BilgiLines SET Deger = @FisNoFazla WHERE Link_Numara = 99102;
             
             -- Ana fiş oluştur
-            INSERT INTO stk_Fis (FisTuru, FisNo, GirisCikis, Tarih, Aciklamalar, Grup3,
-                                KdvOrani, AraToplam, calcGenelToplam, DovizKuru, KdvDegeri,
-                                LogoKontrol, Status, DepoRefNo, Islemvar, IslemKullanici, IadeKontrol, DevamDurumu)
-            VALUES (50, @FisNoFazla, 1, @Tarih, '0.KAT:SAYIM YAPILAN VE SAYIM FAZLASI VEREN STOKLAR', @Depo,
+            INSERT INTO stk_Fis (FisTuru, FisNo, GirisCikis, Tarih, FirmaKodu, FirmaAdi,
+                                Aciklamalar, Grup3, KdvOrani, AraToplam, calcGenelToplam, 
+                                DovizKuru, KdvDegeri, LogoKontrol, Status, DepoRefNo, 
+                                Islemvar, IslemKullanici, IadeKontrol, DevamDurumu)
+            VALUES (50, @FisNoFazla, 1, @Tarih, '', '', 
+                    '0.KAT:SAYIM YAPILAN VE SAYIM FAZLASI VEREN STOKLAR', @Depo,
                     0, 0.00, 0.00, 0.00, 0.00, 0, 0, 1, 0, 0, 0, 3);
             
             -- Satırları ekle

@@ -239,12 +239,12 @@ class DatabaseManager:
             
             query = """
             INSERT INTO stk_Fis (
-                FisTuru, FisNo, GirisCikis, Tarih, KdvOrani, AraToplam, 
-                calcGenelToplam, DovizKuru, Aciklamalar, Grup3, KdvDegeri,
-                LogoKontrol, Status, DepoRefNo, Islemvar, IslemKullanici, 
-                IadeKontrol, DevamDurumu
+                FisTuru, FisNo, GirisCikis, Tarih, FirmaKodu, FirmaAdi, 
+                KdvOrani, AraToplam, calcGenelToplam, DovizKuru, 
+                Aciklamalar, Grup3, KdvDegeri, LogoKontrol, Status, 
+                DepoRefNo, Islemvar, IslemKullanici, IadeKontrol, DevamDurumu
             ) VALUES (
-                ?, ?, ?, ?, 0, 0.00, 0.00, 0.00, ?, ?, 0.00,
+                ?, ?, ?, ?, '', '', 0, 0.00, 0.00, 0.00, ?, ?, 0.00,
                 0, 0, 1, 0, 0, 0, 3
             )
             """
