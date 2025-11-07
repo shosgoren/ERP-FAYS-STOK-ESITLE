@@ -235,8 +235,9 @@ class DatabaseManager:
     def create_fis_record(self, fisno, fis_turu, giris_cikis, depo, aciklama, depo_ref_no=None):
         """stk_Fis tablosuna kayıt oluştur"""
         try:
-            # Tarih formatı: YYYY-MM-DD (Yıl-Ay-Gün)
-            tarih = datetime.now().strftime('%Y-%m-%d')
+            # Tarih: datetime objesi olarak gönder (SQL Server otomatik olarak doğru formatta işler)
+            # Bugünün tarihi, saat 00:00:00 olarak
+            tarih = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             
             # DepoRefNo yoksa stk_depo tablosundan al
             if depo_ref_no is None:
