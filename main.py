@@ -159,6 +159,13 @@ class StockSyncApp(ctk.CTk):
             )
             self.status_indicator.configure(fg_color=ModernTheme.COLORS['connected'])
             logger.info(f"Veritabanı bağlantısı başarılı: {db_display}")
+            
+            # Bağlantı kurulduğunda depoları otomatik yükle
+            try:
+                self.sync_frame.auto_load_warehouses()
+                self.comparison_frame.load_warehouses()
+            except Exception as e:
+                logger.warning(f"Depolar otomatik yüklenirken hata: {e}")
         else:
             self.db_title_label.configure(
                 text="Bağlantı Yok",

@@ -423,10 +423,26 @@ class ComparisonFrame(ctk.CTkFrame):
     def load_warehouses(self):
         """Depoları yükle"""
         try:
+            # Bağlantı kontrolü
+            if not self.sync_engine.db.conn_fays or not self.sync_engine.db.conn_logo:
+                messagebox.showwarning("Uyarı", "Önce veritabanına bağlanmalısınız!")
+                return
+            
             warehouses = self.sync_engine.get_warehouses()
             if warehouses:
+                # Mevcut değeri koru
+                current_value = self.warehouse_combo.get()
                 self.warehouse_combo.configure(values=["Tümü"] + warehouses)
+                
+                # Eğer mevcut değer listede varsa koru
+                if current_value in ["Tümü"] + warehouses:
+                    self.warehouse_combo.set(current_value)
+                else:
+                    self.warehouse_combo.set("Tümü")
+                
                 messagebox.showinfo("Başarılı", f"{len(warehouses)} depo yüklendi")
+            else:
+                messagebox.showwarning("Uyarı", "Depo bulunamadı!")
         except Exception as e:
             messagebox.showerror("Hata", f"Depo listesi yüklenemedi:\n{str(e)}")
     
@@ -658,13 +674,30 @@ class SyncFrame(ctk.CTkFrame):
     def auto_load_warehouses(self):
         """Depoları otomatik yükle"""
         try:
-            if self.sync_engine.db.conn_fays:
-                warehouses = self.sync_engine.get_warehouses()
-                if warehouses:
-                    self.warehouse_combo.configure(values=warehouses)
-                    logger.info(f"{len(warehouses)} depo otomatik yüklendi")
+            # Bağlantı kontrolü
+            if not self.sync_engine.db.conn_fays or not self.sync_engine.db.conn_logo:
+                logger.debug("Bağlantı yok, depolar yüklenemedi")
+                return
+            
+            warehouses = self.sync_engine.get_warehouses()
+            if warehouses and len(warehouses) > 0:
+                # Mevcut değeri koru
+                current_value = self.warehouse_combo.get()
+                self.warehouse_combo.configure(values=warehouses)
+                
+                # Eğer mevcut değer listede varsa koru, yoksa ilkini seç
+                if current_value in warehouses:
+                    self.warehouse_combo.set(current_value)
+                elif warehouses:
+                    self.warehouse_combo.set(warehouses[0])
+                    # Depo seçildiğinde rafları da yükle
+                    self.on_warehouse_changed(warehouses[0])
+                
+                logger.info(f"{len(warehouses)} depo otomatik yüklendi: {warehouses}")
+            else:
+                logger.warning("Depo listesi boş")
         except Exception as e:
-            logger.warning(f"Depo listesi otomatik yüklenemedi: {e}")
+            logger.warning(f"Depo listesi otomatik yüklenemedi: {e}", exc_info=True)
     
     def on_warehouse_changed(self, warehouse):
         """Depo değiştiğinde rafları otomatik yükle"""
