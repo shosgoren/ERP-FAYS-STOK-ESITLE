@@ -84,34 +84,41 @@ def create_app_icon():
         
         # En büyük ve en kaliteli görüntüyü (256x256) ICO olarak kaydet
         images[-1].save('app_icon.ico', format='ICO')
-        print("✓ app_icon.ico oluşturuldu! (256x256 - Windows otomatik ölçekler)")
-        print("  → PyInstaller bu icon'u EXE dosyasına ekleyecek")
-        print("  → Windows Explorer ve görev çubuğunda görünecek")
-        print("  → Icon dosyası boyutu kontrol ediliyor...")
+        print("[OK] app_icon.ico olusturuldu! (256x256 - Windows otomatik olceklr)")
+        print("  -> PyInstaller bu icon'u EXE dosyasina ekleyecek")
+        print("  -> Windows Explorer ve gorev cubugunda gorunecek")
+        print("  -> Icon dosyasi boyutu kontrol ediliyor...")
         
         # Dosya boyutunu kontrol et
         import os
         file_size = os.path.getsize('app_icon.ico')
-        print(f"  → Icon dosyası boyutu: {file_size} bytes")
+        print(f"  -> Icon dosyasi boyutu: {file_size} bytes")
         
         if file_size < 1000:
-            print("  ⚠️  UYARI: Icon dosyası çok küçük, PyInstaller sorun yaşayabilir!")
+            print("  [UYARI] Icon dosyasi cok kucuk, PyInstaller sorun yasayabilir!")
         else:
-            print("  ✓ Icon dosyası boyutu uygun")
+            print("  [OK] Icon dosyasi boyutu uygun")
         
         # PNG olarak da kaydet (önizleme için)
         images[-1].save('app_icon.png', format='PNG')
-        print("✓ app_icon.png oluşturuldu!")
+        print("[OK] app_icon.png olusturuldu!")
         
         return True
     return False
 
 if __name__ == "__main__":
     try:
+        # Windows encoding sorununu önlemek için
+        import sys
+        import io
+        if sys.platform == "win32":
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+        
         create_app_icon()
-        print("\n✅ Icon başarıyla oluşturuldu!")
+        print("\n[OK] Icon basariyla olusturuldu!")
     except Exception as e:
-        print(f"❌ Hata: {e}")
+        print(f"[HATA] Hata: {e}")
         import traceback
         traceback.print_exc()
 
