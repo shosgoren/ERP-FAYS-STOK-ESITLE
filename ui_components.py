@@ -420,12 +420,13 @@ class ComparisonFrame(ctk.CTkFrame):
                        font=('Arial', 10, 'bold'))
         style.map('Treeview', background=[('selected', '#1f538d')])
     
-    def load_warehouses(self):
+    def load_warehouses(self, silent=False):
         """Depoları yükle"""
         try:
             # Bağlantı kontrolü
             if not self.sync_engine.db.conn_fays or not self.sync_engine.db.conn_logo:
-                messagebox.showwarning("Uyarı", "Önce veritabanına bağlanmalısınız!")
+                if not silent:
+                    messagebox.showwarning("Uyarı", "Önce veritabanına bağlanmalısınız!")
                 return
             
             warehouses = self.sync_engine.get_warehouses()
@@ -440,11 +441,17 @@ class ComparisonFrame(ctk.CTkFrame):
                 else:
                     self.warehouse_combo.set("Tümü")
                 
-                messagebox.showinfo("Başarılı", f"{len(warehouses)} depo yüklendi")
+                if not silent:
+                    messagebox.showinfo("Başarılı", f"{len(warehouses)} depo yüklendi")
+                logger.info(f"{len(warehouses)} depo yüklendi: {warehouses}")
             else:
-                messagebox.showwarning("Uyarı", "Depo bulunamadı!")
+                if not silent:
+                    messagebox.showwarning("Uyarı", "Depo bulunamadı!")
+                logger.warning("Depo listesi boş")
         except Exception as e:
-            messagebox.showerror("Hata", f"Depo listesi yüklenemedi:\n{str(e)}")
+            if not silent:
+                messagebox.showerror("Hata", f"Depo listesi yüklenemedi:\n{str(e)}")
+            logger.warning(f"Depo listesi yüklenemedi: {e}", exc_info=True)
     
     def compare(self):
         """Stokları karşılaştır"""

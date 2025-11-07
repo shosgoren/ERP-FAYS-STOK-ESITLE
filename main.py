@@ -163,9 +163,9 @@ class StockSyncApp(ctk.CTk):
             # Bağlantı kurulduğunda depoları otomatik yükle
             try:
                 self.sync_frame.auto_load_warehouses()
-                self.comparison_frame.load_warehouses()
+                self.comparison_frame.load_warehouses(silent=True)  # Sessiz mod - mesaj gösterme
             except Exception as e:
-                logger.warning(f"Depolar otomatik yüklenirken hata: {e}")
+                logger.warning(f"Depolar otomatik yüklenirken hata: {e}", exc_info=True)
         else:
             self.db_title_label.configure(
                 text="Bağlantı Yok",
