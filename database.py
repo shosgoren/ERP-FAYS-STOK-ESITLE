@@ -251,7 +251,7 @@ class DatabaseManager:
                 DepoRefNo, Islemvar, IslemKullanici, IadeKontrol, DevamDurumu
             ) VALUES (
                 ?, ?, ?, ?, '', '', 0, 0.00, 0.00, 0.00, ?, ?, 0.00,
-                0, 0, ?, 0, 0, 0, 3
+                0, 0, ?, 1, 0, 0, 3
             )
             """
             
@@ -317,7 +317,7 @@ class DatabaseManager:
                 0, 0, 0, 0, 0, 0, 1,
                 0.00, 0, 0, 0, 1,
                 ?, ?, ?, 0, 0,
-                0, 0, ?, 8215
+                0, 0, ?, 1
             )
             """
             
