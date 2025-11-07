@@ -147,15 +147,16 @@ class ConnectionFrame(ctk.CTkFrame):
         )
         self.status_label.pack(padx=ModernTheme.SPACING['lg'], pady=ModernTheme.SPACING['md'])
     
-    def connect(self):
+    def connect(self, silent=False):
         """Veritabanına bağlan"""
         try:
-            self.status_label.configure(
-                text="Bağlanıyor...",
-                text_color=ModernTheme.COLORS['loading']
-            )
-            self.status_card.configure(fg_color=ModernTheme.COLORS['bg_tertiary'])
-            self.update()
+            if not silent:
+                self.status_label.configure(
+                    text="Bağlanıyor...",
+                    text_color=ModernTheme.COLORS['loading']
+                )
+                self.status_card.configure(fg_color=ModernTheme.COLORS['bg_tertiary'])
+                self.update()
             
             # Ayarları güncelle
             Config.DB_SERVER = self.server_entry.get()
@@ -170,30 +171,36 @@ class ConnectionFrame(ctk.CTkFrame):
             if success:
                 # Veritabanı adını al
                 db_name = Config.DB_FAYS
-                self.status_label.configure(
-                    text="✓ Bağlantı başarılı!",
-                    text_color=ModernTheme.COLORS['success']
-                )
-                self.status_card.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
+                if not silent:
+                    self.status_label.configure(
+                        text="✓ Bağlantı başarılı!",
+                        text_color=ModernTheme.COLORS['success']
+                    )
+                    self.status_card.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
                 self.on_connection_changed(True, db_name)
-                messagebox.showinfo("Başarılı", "Veritabanı bağlantısı başarıyla kuruldu!")
+                if not silent:
+                    messagebox.showinfo("Başarılı", "Veritabanı bağlantısı başarıyla kuruldu!")
             else:
+                if not silent:
+                    self.status_label.configure(
+                        text="✗ Bağlantı başarısız!",
+                        text_color=ModernTheme.COLORS['danger']
+                    )
+                    self.status_card.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
+                self.on_connection_changed(False)
+                if not silent:
+                    messagebox.showerror("Hata", "Veritabanına bağlanılamadı!")
+                
+        except Exception as e:
+            if not silent:
                 self.status_label.configure(
-                    text="✗ Bağlantı başarısız!",
+                    text=f"✗ Hata: {str(e)}",
                     text_color=ModernTheme.COLORS['danger']
                 )
                 self.status_card.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
-                self.on_connection_changed(False)
-                messagebox.showerror("Hata", "Veritabanına bağlanılamadı!")
-                
-        except Exception as e:
-            self.status_label.configure(
-                text=f"✗ Hata: {str(e)}",
-                text_color=ModernTheme.COLORS['danger']
-            )
-            self.status_card.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
             self.on_connection_changed(False)
-            messagebox.showerror("Hata", f"Bağlantı hatası:\n{str(e)}")
+            if not silent:
+                messagebox.showerror("Hata", f"Bağlantı hatası:\n{str(e)}")
     
     def test_connection(self):
         """Bağlantıyı test et"""
@@ -259,8 +266,8 @@ class ConnectionFrame(ctk.CTkFrame):
                 self.fays_db_entry.insert(0, result.get('DB_FAYS', 'FaysWMSAkturk'))
                 
                 if auto_connect:
-                    # Otomatik bağlan
-                    self.connect()
+                    # Otomatik bağlan (sessiz mod - mesaj gösterme)
+                    # connect çağrısı auto_load_connection içinde yapılacak
                     return True
                 else:
                     messagebox.showinfo("Başarılı", "Bağlantı bilgileri yüklendi!\n"
@@ -279,7 +286,10 @@ class ConnectionFrame(ctk.CTkFrame):
         """Program başladığında otomatik olarak kayıtlı bağlantıyı yükle ve bağlan"""
         try:
             if SecureConfig.config_exists():
-                self.load_secure_config(auto_connect=True)
+                # Bağlantı bilgilerini yükle
+                if self.load_secure_config(auto_connect=True):
+                    # Sessiz modda bağlan (mesaj gösterme)
+                    self.connect(silent=True)
         except Exception as e:
             logger.warning(f"Otomatik bağlantı yükleme hatası: {e}")
     
