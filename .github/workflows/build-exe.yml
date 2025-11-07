@@ -28,8 +28,9 @@ jobs:
       run: |
         if (Test-Path app_icon.ico) {
           Write-Host "Icon dosyası bulundu, icon ile build yapılıyor"
-          $iconPath = Resolve-Path app_icon.ico
+          $iconPath = (Resolve-Path app_icon.ico).Path
           Write-Host "Icon yolu: $iconPath"
+          Write-Host "Icon dosyası boyutu: $((Get-Item app_icon.ico).Length) bytes"
           pyinstaller --onefile --windowed --name StokEsitleme `
             --icon="$iconPath" `
             --add-data "config.py;." `

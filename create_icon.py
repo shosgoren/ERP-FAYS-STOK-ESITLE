@@ -77,14 +77,41 @@ def create_app_icon():
     
     # ICO dosyası olarak kaydet - Windows ve PyInstaller için optimize edilmiş
     if images:
-        # Windows için önemli boyutlar: 16, 32, 48, 256
-        # PyInstaller ve Windows Explorer için en iyi sonuç için 256x256 yeterli
-        # Windows otomatik olarak diğer boyutlara ölçekler
-        # En büyük ve en kaliteli görüntüyü (256x256) ICO olarak kaydet
-        images[-1].save('app_icon.ico', format='ICO')
-        print("✓ app_icon.ico oluşturuldu! (256x256 - Windows otomatik ölçekler)")
-        print("  → PyInstaller bu icon'u EXE dosyasına ekleyecek")
-        print("  → Windows Explorer ve görev çubuğunda görünecek")
+        # PyInstaller için tüm boyutları içeren ICO dosyası oluştur
+        # Windows için önemli boyutlar: 16, 32, 48, 64, 128, 256
+        try:
+            # Tüm boyutları içeren ICO dosyası oluştur
+            # İlk görüntüyü kullan ve tüm boyutları ekle
+            images[0].save(
+                'app_icon.ico',
+                format='ICO',
+                sizes=[(s, s) for s in sizes]
+            )
+            print(f"✓ app_icon.ico oluşturuldu! (Tüm boyutlar: {sizes})")
+            print("  → PyInstaller bu icon'u EXE dosyasına ekleyecek")
+            print("  → Windows Explorer ve görev çubuğunda görünecek")
+        except Exception as e:
+            # Eğer çoklu boyut desteklenmiyorsa, en önemli boyutları dene
+            print(f"Çoklu boyut hatası: {e}, önemli boyutlar kaydediliyor...")
+            try:
+                # Önemli boyutları seç: 16, 32, 48, 256
+                important_sizes = [16, 32, 48, 256]
+                important_images = [images[sizes.index(s)] for s in important_sizes if s in sizes]
+                if important_images:
+                    important_images[0].save(
+                        'app_icon.ico',
+                        format='ICO',
+                        sizes=[(s, s) for s in important_sizes if s in sizes]
+                    )
+                    print(f"✓ app_icon.ico oluşturuldu! (Önemli boyutlar: {[s for s in important_sizes if s in sizes]})")
+                else:
+                    # Son çare: sadece en büyük boyutu kaydet
+                    images[-1].save('app_icon.ico', format='ICO')
+                    print("✓ app_icon.ico oluşturuldu! (256x256 - tek boyut)")
+            except Exception as e2:
+                # Son çare: sadece en büyük boyutu kaydet
+                images[-1].save('app_icon.ico', format='ICO')
+                print(f"✓ app_icon.ico oluşturuldu! (256x256 - hata: {e2})")
         
         # PNG olarak da kaydet (önizleme için)
         images[-1].save('app_icon.png', format='PNG')
