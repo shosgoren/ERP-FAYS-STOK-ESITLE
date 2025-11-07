@@ -83,7 +83,7 @@ class StockSyncApp(ctk.CTk):
         app_title = ctk.CTkLabel(
             header_left,
             text="📦 Stok Eşitleme",
-            font=ModernTheme.FONTS['h3'],
+            font=ModernTheme.get_font('h3'),
             text_color=ModernTheme.COLORS['text_primary']
         )
         app_title.pack(side="left", padx=(0, ModernTheme.SPACING['lg']))
@@ -104,7 +104,7 @@ class StockSyncApp(ctk.CTk):
         self.db_title_label = ctk.CTkLabel(
             header_right,
             text="Bağlantı Yok",
-            font=ModernTheme.FONTS['body'],
+            font=ModernTheme.get_font('body'),
             text_color=ModernTheme.COLORS['text_secondary']
         )
         self.db_title_label.pack(side="left")

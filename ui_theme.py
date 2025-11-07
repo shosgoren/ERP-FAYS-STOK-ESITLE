@@ -37,18 +37,42 @@ class ModernTheme:
         'loading': '#3B82F6',       # Yükleniyor
     }
     
-    # Tipografi
-    FONTS = {
-        'h1': ctk.CTkFont(size=32, weight="bold"),
-        'h2': ctk.CTkFont(size=24, weight="bold"),
-        'h3': ctk.CTkFont(size=20, weight="bold"),
-        'h4': ctk.CTkFont(size=18, weight="bold"),
-        'body_large': ctk.CTkFont(size=16),
-        'body': ctk.CTkFont(size=14),
-        'body_small': ctk.CTkFont(size=12),
-        'caption': ctk.CTkFont(size=11),
-        'code': ctk.CTkFont(family="Courier New", size=12),
-    }
+    # Tipografi - Lazy initialization (font'lar kullanıldığında oluşturulur)
+    _fonts_cache = {}
+    
+    @staticmethod
+    def get_font(font_name):
+        """Font'u lazy olarak oluştur veya cache'den döndür"""
+        if font_name not in ModernTheme._fonts_cache:
+            font_configs = {
+                'h1': {'size': 32, 'weight': 'bold'},
+                'h2': {'size': 24, 'weight': 'bold'},
+                'h3': {'size': 20, 'weight': 'bold'},
+                'h4': {'size': 18, 'weight': 'bold'},
+                'body_large': {'size': 16},
+                'body': {'size': 14},
+                'body_small': {'size': 12},
+                'caption': {'size': 11},
+                'code': {'family': 'Courier New', 'size': 12},
+            }
+            config = font_configs.get(font_name, {'size': 14})
+            ModernTheme._fonts_cache[font_name] = ctk.CTkFont(**config)
+        return ModernTheme._fonts_cache[font_name]
+    
+    @staticmethod
+    def FONTS():
+        """Font dictionary - property olarak erişim"""
+        return {
+            'h1': ModernTheme.get_font('h1'),
+            'h2': ModernTheme.get_font('h2'),
+            'h3': ModernTheme.get_font('h3'),
+            'h4': ModernTheme.get_font('h4'),
+            'body_large': ModernTheme.get_font('body_large'),
+            'body': ModernTheme.get_font('body'),
+            'body_small': ModernTheme.get_font('body_small'),
+            'caption': ModernTheme.get_font('caption'),
+            'code': ModernTheme.get_font('code'),
+        }
     
     # Spacing
     SPACING = {
@@ -94,7 +118,7 @@ class ModernTheme:
             parent,
             text=text,
             command=command,
-            font=ModernTheme.FONTS['body'],
+            font=ModernTheme.get_font('body'),
             fg_color=ModernTheme.COLORS['primary'],
             hover_color=ModernTheme.COLORS['primary_hover'],
             corner_radius=ModernTheme.RADIUS['md'],
@@ -109,7 +133,7 @@ class ModernTheme:
             parent,
             text=text,
             command=command,
-            font=ModernTheme.FONTS['body'],
+            font=ModernTheme.get_font('body'),
             fg_color=ModernTheme.COLORS['success'],
             hover_color=ModernTheme.COLORS['success_hover'],
             corner_radius=ModernTheme.RADIUS['md'],
@@ -124,7 +148,7 @@ class ModernTheme:
             parent,
             text=text,
             command=command,
-            font=ModernTheme.FONTS['body'],
+            font=ModernTheme.get_font('body'),
             fg_color=ModernTheme.COLORS['danger'],
             hover_color=ModernTheme.COLORS['danger_hover'],
             corner_radius=ModernTheme.RADIUS['md'],
@@ -139,7 +163,7 @@ class ModernTheme:
             parent,
             text=text,
             command=command,
-            font=ModernTheme.FONTS['body'],
+            font=ModernTheme.get_font('body'),
             fg_color=ModernTheme.COLORS['warning'],
             hover_color=ModernTheme.COLORS['warning_hover'],
             corner_radius=ModernTheme.RADIUS['md'],
@@ -154,7 +178,7 @@ class ModernTheme:
             parent,
             text=text,
             command=command,
-            font=ModernTheme.FONTS['body'],
+            font=ModernTheme.get_font('body'),
             fg_color="transparent",
             border_width=2,
             border_color=ModernTheme.COLORS['border_light'],
@@ -173,7 +197,7 @@ class ModernTheme:
             placeholder_text=placeholder,
             width=width,
             height=40,
-            font=ModernTheme.FONTS['body'],
+            font=ModernTheme.get_font('body'),
             corner_radius=ModernTheme.RADIUS['md'],
             border_width=1,
             border_color=ModernTheme.COLORS['border'],
@@ -188,7 +212,7 @@ class ModernTheme:
         return ctk.CTkLabel(
             parent,
             text=text,
-            font=ModernTheme.FONTS['h3'],
+            font=ModernTheme.get_font('h3'),
             text_color=ModernTheme.COLORS['text_primary'],
             anchor="w"
         )
@@ -199,7 +223,7 @@ class ModernTheme:
         return ctk.CTkLabel(
             parent,
             text=text,
-            font=ModernTheme.FONTS.get(size, ModernTheme.FONTS['body']),
+            font=ModernTheme.get_font(size if size in ['h1', 'h2', 'h3', 'h4', 'body_large', 'body', 'body_small', 'caption', 'code'] else 'body'),
             text_color=ModernTheme.COLORS.get(color, ModernTheme.COLORS['text_primary'])
         )
 

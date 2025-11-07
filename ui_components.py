@@ -36,7 +36,7 @@ class ConnectionFrame(ctk.CTkFrame):
         title = ctk.CTkLabel(
             self,
             text="Veritabanı Bağlantısı",
-            font=ModernTheme.FONTS['h2'],
+            font=ModernTheme.get_font('h2'),
             text_color=ModernTheme.COLORS['text_primary']
         )
         title.pack(pady=(0, ModernTheme.SPACING['xl']))
@@ -142,7 +142,7 @@ class ConnectionFrame(ctk.CTkFrame):
         self.status_label = ctk.CTkLabel(
             self.status_card,
             text="",
-            font=ModernTheme.FONTS['body'],
+            font=ModernTheme.get_font('body'),
             text_color=ModernTheme.COLORS['text_secondary']
         )
         self.status_label.pack(padx=ModernTheme.SPACING['lg'], pady=ModernTheme.SPACING['md'])
@@ -539,7 +539,7 @@ class SyncFrame(ctk.CTkFrame):
         title = ctk.CTkLabel(
             self,
             text="Stok Eşitleme",
-            font=ModernTheme.FONTS['h2'],
+            font=ModernTheme.get_font('h2'),
             text_color=ModernTheme.COLORS['text_primary']
         )
         title.pack(pady=(0, ModernTheme.SPACING['lg']))
@@ -556,7 +556,7 @@ class SyncFrame(ctk.CTkFrame):
             warning_card,
             text="⚠️ DİKKAT: Bu işlem FAYS WMS stoklarını LOGO ERP'ye göre eşitleyecektir!\n"
                  "İşlem geri alınamaz! Devam etmeden önce yedek aldığınızdan emin olun.",
-            font=ModernTheme.FONTS['body'],
+            font=ModernTheme.get_font('body'),
             text_color="white",
             justify="left"
         )
@@ -578,7 +578,7 @@ class SyncFrame(ctk.CTkFrame):
             values=[Config.DEFAULT_WAREHOUSE],
             width=400,
             height=40,
-            font=ModernTheme.FONTS['body'],
+            font=ModernTheme.get_font('body'),
             corner_radius=ModernTheme.RADIUS['md'],
             command=self.on_warehouse_changed
         )
@@ -597,7 +597,7 @@ class SyncFrame(ctk.CTkFrame):
             values=["Raf seçmek için depo seçin..."],
             width=400,
             height=40,
-            font=ModernTheme.FONTS['body'],
+            font=ModernTheme.get_font('body'),
             corner_radius=ModernTheme.RADIUS['md'],
             state="disabled",
             command=self.on_raf_changed
@@ -628,7 +628,7 @@ class SyncFrame(ctk.CTkFrame):
             command=self.start_sync,
             width=300,
             height=50,
-            font=ModernTheme.FONTS['h4']
+            font=ModernTheme.get_font('h4')
         )
         self.sync_btn.pack(side="left", padx=ModernTheme.SPACING['sm'])
         
@@ -641,7 +641,7 @@ class SyncFrame(ctk.CTkFrame):
         
         self.result_text = ctk.CTkTextbox(
             result_card,
-            font=ModernTheme.FONTS['code'],
+            font=ModernTheme.get_font('code'),
             wrap="word",
             corner_radius=ModernTheme.RADIUS['md'],
             fg_color=ModernTheme.COLORS['bg_tertiary'],
