@@ -28,8 +28,10 @@ jobs:
       run: |
         if (Test-Path app_icon.ico) {
           Write-Host "Icon dosyası bulundu, icon ile build yapılıyor"
+          $iconPath = Resolve-Path app_icon.ico
+          Write-Host "Icon yolu: $iconPath"
           pyinstaller --onefile --windowed --name StokEsitleme `
-            --icon=app_icon.ico `
+            --icon="$iconPath" `
             --add-data "config.py;." `
             --add-data "config_secure.py;." `
             --add-data "sql_templates.py;." `

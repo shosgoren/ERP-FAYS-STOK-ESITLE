@@ -325,6 +325,7 @@ class ComparisonFrame(ctk.CTkFrame):
         
         self.sync_engine = sync_engine
         self.df_result = None
+        self.tree_data = []  # Filtreleme için tüm veriler
         
         self.create_widgets()
     
@@ -369,6 +370,36 @@ class ComparisonFrame(ctk.CTkFrame):
             width=150
         )
         self.export_btn.pack(side="left", padx=10)
+        
+        # Filtreleme paneli
+        filter_panel = ctk.CTkFrame(self)
+        filter_panel.pack(fill="x", padx=10, pady=(0, 10))
+        
+        ctk.CTkLabel(
+            filter_panel,
+            text="🔍 Filtrele:",
+            font=ctk.CTkFont(size=14)
+        ).pack(side="left", padx=10, pady=10)
+        
+        self.filter_entry = ctk.CTkEntry(
+            filter_panel,
+            placeholder_text="Ürün kodu, adı veya diğer alanlarda ara...",
+            width=400,
+            font=ctk.CTkFont(size=12)
+        )
+        self.filter_entry.pack(side="left", padx=10, pady=10, fill="x", expand=True)
+        self.filter_entry.bind('<KeyRelease>', self.on_filter_change)
+        
+        # Filtreyi temizle butonu
+        clear_filter_btn = ctk.CTkButton(
+            filter_panel,
+            text="✖ Temizle",
+            command=self.clear_filter,
+            width=100,
+            fg_color="gray",
+            hover_color="darkgray"
+        )
+        clear_filter_btn.pack(side="left", padx=10, pady=10)
         
         # İstatistik paneli
         stats_frame = ctk.CTkFrame(self)
@@ -488,9 +519,11 @@ class ComparisonFrame(ctk.CTkFrame):
                 self.tree.heading(col, text=col)
                 self.tree.column(col, width=120, anchor='center')
             
-            # Verileri ekle
+            # Verileri ekle ve filtreleme için sakla
+            self.tree_data = []  # Tüm verileri sakla (filtreleme için)
             for _, row in self.df_result.iterrows():
                 values = [row[col] for col in columns]
+                self.tree_data.append((values, row))
                 
                 # Fark durumuna göre renklendirme için tag
                 if row['FARK'] > 0:
@@ -522,6 +555,67 @@ class ComparisonFrame(ctk.CTkFrame):
             self.stats_label.configure(text="Hata oluştu!", text_color="red")
             messagebox.showerror("Hata", f"Karşılaştırma hatası:\n{str(e)}")
             logger.error(f"Karşılaştırma hatası: {e}", exc_info=True)
+    
+    def on_filter_change(self, event=None):
+        """Filtre değiştiğinde treeview'i güncelle"""
+        if not hasattr(self, 'tree_data') or len(self.tree_data) == 0:
+            return
+        
+        filter_text = self.filter_entry.get().lower().strip()
+        
+        # Treeview'i temizle
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        
+        # Filtreleme yap
+        filtered_count = 0
+        for values, row in self.tree_data:
+            # Tüm değerlerde ara (case-insensitive)
+            match = False
+            for val in values:
+                if filter_text in str(val).lower():
+                    match = True
+                    break
+            
+            if match or filter_text == "":
+                # Fark durumuna göre renklendirme için tag
+                if row['FARK'] > 0:
+                    tag = 'fazla'
+                else:
+                    tag = 'eksik'
+                
+                self.tree.insert('', 'end', values=values, tags=(tag,))
+                filtered_count += 1
+        
+        # İstatistikleri güncelle
+        if filter_text:
+            total_diff = len(self.df_result)
+            fays_fazla = len(self.df_result[self.df_result['FARK'] > 0])
+            fays_eksik = len(self.df_result[self.df_result['FARK'] < 0])
+            
+            stats_text = (
+                f"Toplam Fark: {total_diff} | "
+                f"🔴 FAYS Fazla: {fays_fazla} | "
+                f"🟢 FAYS Eksik: {fays_eksik} | "
+                f"🔍 Filtrelenmiş: {filtered_count}"
+            )
+        else:
+            total_diff = len(self.df_result)
+            fays_fazla = len(self.df_result[self.df_result['FARK'] > 0])
+            fays_eksik = len(self.df_result[self.df_result['FARK'] < 0])
+            
+            stats_text = (
+                f"Toplam Fark: {total_diff} | "
+                f"🔴 FAYS Fazla: {fays_fazla} | "
+                f"🟢 FAYS Eksik: {fays_eksik}"
+            )
+        
+        self.stats_label.configure(text=stats_text, text_color="white")
+    
+    def clear_filter(self):
+        """Filtreyi temizle"""
+        self.filter_entry.delete(0, 'end')
+        self.on_filter_change()
     
     def export_to_excel(self):
         """Sonuçları Excel'e aktar"""
