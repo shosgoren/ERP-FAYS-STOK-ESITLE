@@ -75,10 +75,12 @@ def create_app_icon():
         
         images.append(img)
     
-    # ICO dosyası olarak kaydet
+    # ICO dosyası olarak kaydet - en büyük boyutu kullan (Windows otomatik ölçekler)
     if images:
-        images[0].save('app_icon.ico', format='ICO', sizes=[(s, s) for s in sizes])
-        print("✓ app_icon.ico oluşturuldu!")
+        # En büyük boyutu (256x256) ICO olarak kaydet
+        # Windows bu boyutu otomatik olarak diğer boyutlara ölçekler
+        images[-1].save('app_icon.ico', format='ICO')
+        print("✓ app_icon.ico oluşturuldu! (256x256)")
         
         # PNG olarak da kaydet (önizleme için)
         images[-1].save('app_icon.png', format='PNG')

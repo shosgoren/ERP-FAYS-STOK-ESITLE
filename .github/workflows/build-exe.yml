@@ -24,21 +24,25 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
     
-    - name: Create Icon
-      run: |
-        python create_icon.py
-    
     - name: Build EXE
       run: |
-        pyinstaller --onefile --windowed --name StokEsitleme `
-          --icon=app_icon.ico `
+        $iconFlag = ""
+        $iconData = ""
+        if (Test-Path app_icon.ico) {
+          $iconFlag = "--icon=app_icon.ico"
+          $iconData = "--add-data `"app_icon.ico;.`""
+          Write-Host "Icon dosyası bulundu, icon ile build yapılıyor"
+        } else {
+          Write-Host "Icon dosyası bulunamadı, icon olmadan build yapılıyor"
+        }
+        pyinstaller --onefile --windowed --name StokEsitleme $iconFlag `
           --add-data "config.py;." `
           --add-data "config_secure.py;." `
           --add-data "sql_templates.py;." `
           --add-data "database.py;." `
           --add-data "stock_sync_engine.py;." `
           --add-data "ui_components.py;." `
-          --add-data "app_icon.ico;." `
+          $iconData `
           --hidden-import=customtkinter `
           --hidden-import=pyodbc `
           --hidden-import=pandas `
