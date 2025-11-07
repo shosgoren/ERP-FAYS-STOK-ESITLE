@@ -22,6 +22,7 @@ from ui_components import (
     QueryEditorFrame,
     SettingsFrame
 )
+from ui_theme import ModernTheme
 
 # Logging ayarla
 logging.basicConfig(
@@ -41,13 +42,13 @@ class StockSyncApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         
-        # Tema ayarları
-        ctk.set_appearance_mode("dark")
-        ctk.set_default_color_theme("blue")
+        # Modern tema ayarları
+        ModernTheme.apply_theme()
         
         # Pencere ayarları
         self.title(Config.APP_TITLE)
-        self.geometry("1400x900")
+        self.geometry("1600x1000")
+        self.configure(fg_color=ModernTheme.COLORS['bg_primary'])
         
         # Veritabanı yöneticisi
         self.db_manager = DatabaseManager()
@@ -65,18 +66,48 @@ class StockSyncApp(ctk.CTk):
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
         
-        # Üst başlık çubuğu - FAYS Veritabanı adı
-        self.title_frame = ctk.CTkFrame(self, height=50, corner_radius=0)
+        # Üst başlık çubuğu - Modern tasarım
+        self.title_frame = ModernTheme.create_card(
+            self,
+            height=70,
+            corner_radius=0
+        )
         self.title_frame.grid(row=0, column=0, sticky="ew", padx=0, pady=0)
         self.title_frame.grid_columnconfigure(0, weight=1)
+        self.title_frame.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
+        
+        # Sol tarafta logo/başlık
+        header_left = ctk.CTkFrame(self.title_frame, fg_color="transparent")
+        header_left.pack(side="left", padx=ModernTheme.SPACING['lg'], pady=ModernTheme.SPACING['md'])
+        
+        app_title = ctk.CTkLabel(
+            header_left,
+            text="📦 Stok Eşitleme",
+            font=ModernTheme.FONTS['h3'],
+            text_color=ModernTheme.COLORS['text_primary']
+        )
+        app_title.pack(side="left", padx=(0, ModernTheme.SPACING['lg']))
+        
+        # Sağ tarafta veritabanı durumu
+        header_right = ctk.CTkFrame(self.title_frame, fg_color="transparent")
+        header_right.pack(side="right", padx=ModernTheme.SPACING['lg'], pady=ModernTheme.SPACING['md'])
+        
+        self.status_indicator = ctk.CTkFrame(
+            header_right,
+            width=12,
+            height=12,
+            corner_radius=6,
+            fg_color=ModernTheme.COLORS['disconnected']
+        )
+        self.status_indicator.pack(side="left", padx=(0, ModernTheme.SPACING['sm']))
         
         self.db_title_label = ctk.CTkLabel(
-            self.title_frame,
-            text="FAYS Veritabanı: Bağlantı Yok",
-            font=ctk.CTkFont(size=16, weight="bold"),
-            text_color="gray"
+            header_right,
+            text="Bağlantı Yok",
+            font=ModernTheme.FONTS['body'],
+            text_color=ModernTheme.COLORS['text_secondary']
         )
-        self.db_title_label.pack(side="left", padx=20, pady=15)
+        self.db_title_label.pack(side="left")
         
         # Ana içerik alanı - Tab View
         self.tabview = ctk.CTkTabview(self, width=1000)
@@ -123,15 +154,17 @@ class StockSyncApp(ctk.CTk):
         if connected:
             db_display = db_name if db_name else "Bağlı"
             self.db_title_label.configure(
-                text=f"FAYS Veritabanı: {db_display}",
-                text_color="green"
+                text=f"{db_display}",
+                text_color=ModernTheme.COLORS['text_primary']
             )
+            self.status_indicator.configure(fg_color=ModernTheme.COLORS['connected'])
             logger.info(f"Veritabanı bağlantısı başarılı: {db_display}")
         else:
             self.db_title_label.configure(
-                text="FAYS Veritabanı: Bağlantı Yok",
-                text_color="gray"
+                text="Bağlantı Yok",
+                text_color=ModernTheme.COLORS['text_secondary']
             )
+            self.status_indicator.configure(fg_color=ModernTheme.COLORS['disconnected'])
             logger.warning("Veritabanı bağlantısı kesildi")
     
     

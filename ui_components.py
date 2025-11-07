@@ -12,6 +12,7 @@ from datetime import datetime
 from config import Config
 from config_secure import SecureConfig
 from sql_templates import SQLTemplates
+from ui_theme import ModernTheme
 
 logger = logging.getLogger(__name__)
 
@@ -20,8 +21,8 @@ class ConnectionFrame(ctk.CTkFrame):
     """Veritabanı bağlantı ekranı"""
     
     def __init__(self, parent, db_manager, on_connection_changed):
-        super().__init__(parent)
-        self.pack(fill="both", expand=True, padx=20, pady=20)
+        super().__init__(parent, fg_color="transparent")
+        self.pack(fill="both", expand=True, padx=ModernTheme.SPACING['xl'], pady=ModernTheme.SPACING['xl'])
         
         self.db_manager = db_manager
         self.on_connection_changed = on_connection_changed
@@ -29,162 +30,131 @@ class ConnectionFrame(ctk.CTkFrame):
         self.create_widgets()
     
     def create_widgets(self):
-        """Widget'ları oluştur"""
+        """Widget'ları oluştur - Modern tasarım"""
         
         # Başlık
         title = ctk.CTkLabel(
             self,
-            text="Veritabanı Bağlantı Ayarları",
-            font=ctk.CTkFont(size=24, weight="bold")
+            text="Veritabanı Bağlantısı",
+            font=ModernTheme.FONTS['h2'],
+            text_color=ModernTheme.COLORS['text_primary']
         )
-        title.pack(pady=(0, 30))
+        title.pack(pady=(0, ModernTheme.SPACING['xl']))
         
-        # Form container
-        form_frame = ctk.CTkFrame(self)
-        form_frame.pack(fill="both", expand=True, padx=100, pady=20)
+        # Form container - Modern kart
+        form_card = ModernTheme.create_card(self)
+        form_card.pack(fill="both", expand=True, padx=0, pady=0)
         
-        # Server
-        ctk.CTkLabel(
-            form_frame,
-            text="Server:",
-            font=ctk.CTkFont(size=14)
-        ).grid(row=0, column=0, padx=20, pady=15, sticky="w")
+        form_frame = ctk.CTkFrame(form_card, fg_color="transparent")
+        form_frame.pack(fill="both", expand=True, padx=ModernTheme.SPACING['xl'], pady=ModernTheme.SPACING['xl'])
         
-        self.server_entry = ctk.CTkEntry(
-            form_frame,
-            width=400,
-            placeholder_text="örn: server.database.windows.net"
-        )
-        self.server_entry.grid(row=0, column=1, padx=20, pady=15)
-        self.server_entry.insert(0, Config.DB_SERVER)
+        # Form alanları - Modern tasarım
+        fields = [
+            ("Server", "server_entry", "örn: server.database.windows.net", Config.DB_SERVER),
+            ("Kullanıcı Adı", "username_entry", "Kullanıcı adı", Config.DB_USER),
+            ("Şifre", "password_entry", "Şifre", Config.DB_PASSWORD, True),  # Password field
+            ("LOGO Veritabanı", "logo_db_entry", "GOLD", Config.DB_LOGO),
+            ("FAYS Veritabanı", "fays_db_entry", "FaysWMSAkturk", Config.DB_FAYS),
+        ]
         
-        # Username
-        ctk.CTkLabel(
-            form_frame,
-            text="Kullanıcı Adı:",
-            font=ctk.CTkFont(size=14)
-        ).grid(row=1, column=0, padx=20, pady=15, sticky="w")
+        for idx, field_info in enumerate(fields):
+            label_text = field_info[0]
+            attr_name = field_info[1]
+            placeholder = field_info[2]
+            default_value = field_info[3]
+            is_password = len(field_info) > 4 and field_info[4]
+            
+            # Label
+            label = ModernTheme.create_label(
+                form_frame,
+                label_text,
+                size='body',
+                color='text_primary'
+            )
+            label.grid(row=idx, column=0, padx=ModernTheme.SPACING['md'], 
+                      pady=ModernTheme.SPACING['md'], sticky="w")
+            
+            # Entry
+            entry = ModernTheme.create_modern_entry(
+                form_frame,
+                placeholder=placeholder,
+                width=500
+            )
+            if is_password:
+                entry.configure(show="*")
+            entry.grid(row=idx, column=1, padx=ModernTheme.SPACING['md'], 
+                      pady=ModernTheme.SPACING['md'], sticky="ew")
+            entry.insert(0, default_value)
+            
+            setattr(self, attr_name, entry)
         
-        self.username_entry = ctk.CTkEntry(
-            form_frame,
-            width=400,
-            placeholder_text="Kullanıcı adı"
-        )
-        self.username_entry.grid(row=1, column=1, padx=20, pady=15)
-        self.username_entry.insert(0, Config.DB_USER)
+        form_frame.grid_columnconfigure(1, weight=1)
         
-        # Password
-        ctk.CTkLabel(
-            form_frame,
-            text="Şifre:",
-            font=ctk.CTkFont(size=14)
-        ).grid(row=2, column=0, padx=20, pady=15, sticky="w")
+        # Butonlar - Modern tasarım
+        button_container = ctk.CTkFrame(form_frame, fg_color="transparent")
+        button_container.grid(row=len(fields), column=0, columnspan=2, 
+                             pady=(ModernTheme.SPACING['xl'], ModernTheme.SPACING['md']))
         
-        self.password_entry = ctk.CTkEntry(
-            form_frame,
-            width=400,
-            show="*",
-            placeholder_text="Şifre"
-        )
-        self.password_entry.grid(row=2, column=1, padx=20, pady=15)
-        self.password_entry.insert(0, Config.DB_PASSWORD)
+        # Ana butonlar
+        primary_buttons = ctk.CTkFrame(button_container, fg_color="transparent")
+        primary_buttons.pack(fill="x", pady=ModernTheme.SPACING['md'])
         
-        # LOGO Database
-        ctk.CTkLabel(
-            form_frame,
-            text="LOGO Veritabanı:",
-            font=ctk.CTkFont(size=14)
-        ).grid(row=3, column=0, padx=20, pady=15, sticky="w")
-        
-        self.logo_db_entry = ctk.CTkEntry(
-            form_frame,
-            width=400,
-            placeholder_text="GOLD"
-        )
-        self.logo_db_entry.grid(row=3, column=1, padx=20, pady=15)
-        self.logo_db_entry.insert(0, Config.DB_LOGO)
-        
-        # FAYS Database
-        ctk.CTkLabel(
-            form_frame,
-            text="FAYS Veritabanı:",
-            font=ctk.CTkFont(size=14)
-        ).grid(row=4, column=0, padx=20, pady=15, sticky="w")
-        
-        self.fays_db_entry = ctk.CTkEntry(
-            form_frame,
-            width=400,
-            placeholder_text="FaysWMSAkturk"
-        )
-        self.fays_db_entry.grid(row=4, column=1, padx=20, pady=15)
-        self.fays_db_entry.insert(0, Config.DB_FAYS)
-        
-        # Butonlar - 1. Satır
-        button_frame1 = ctk.CTkFrame(form_frame, fg_color="transparent")
-        button_frame1.grid(row=5, column=0, columnspan=2, pady=15)
-        
-        self.connect_btn = ctk.CTkButton(
-            button_frame1,
-            text="🔌 Bağlan",
+        self.connect_btn = ModernTheme.create_success_button(
+            primary_buttons,
+            text="Bağlan",
             command=self.connect,
-            width=200,
-            height=40,
-            font=ctk.CTkFont(size=16, weight="bold"),
-            fg_color="green",
-            hover_color="darkgreen"
+            width=200
         )
-        self.connect_btn.pack(side="left", padx=10)
+        self.connect_btn.pack(side="left", padx=ModernTheme.SPACING['sm'])
         
-        self.test_btn = ctk.CTkButton(
-            button_frame1,
-            text="🔍 Bağlantıyı Test Et",
+        self.test_btn = ModernTheme.create_secondary_button(
+            primary_buttons,
+            text="Test Et",
             command=self.test_connection,
-            width=200,
-            height=40,
-            font=ctk.CTkFont(size=14)
+            width=200
         )
-        self.test_btn.pack(side="left", padx=10)
+        self.test_btn.pack(side="left", padx=ModernTheme.SPACING['sm'])
         
-        # Butonlar - 2. Satır
-        button_frame2 = ctk.CTkFrame(form_frame, fg_color="transparent")
-        button_frame2.grid(row=6, column=0, columnspan=2, pady=15)
+        # İkincil butonlar
+        secondary_buttons = ctk.CTkFrame(button_container, fg_color="transparent")
+        secondary_buttons.pack(fill="x", pady=ModernTheme.SPACING['sm'])
         
-        self.save_btn = ctk.CTkButton(
-            button_frame2,
-            text="💾 Bağlantıyı Şifreli Kaydet",
+        self.save_btn = ModernTheme.create_secondary_button(
+            secondary_buttons,
+            text="Kaydet",
             command=self.save_secure_config,
-            width=200,
-            height=40,
-            font=ctk.CTkFont(size=14),
-            fg_color="#FF9800",
-            hover_color="#F57C00"
+            width=200
         )
-        self.save_btn.pack(side="left", padx=10)
+        self.save_btn.pack(side="left", padx=ModernTheme.SPACING['sm'])
         
-        self.delete_btn = ctk.CTkButton(
-            button_frame2,
-            text="🗑️ Kaydı Sil",
+        self.delete_btn = ModernTheme.create_danger_button(
+            secondary_buttons,
+            text="Kaydı Sil",
             command=self.delete_secure_config,
-            width=200,
-            height=40,
-            font=ctk.CTkFont(size=14),
-            fg_color="#F44336",
-            hover_color="#D32F2F"
+            width=200
         )
-        self.delete_btn.pack(side="left", padx=10)
+        self.delete_btn.pack(side="left", padx=ModernTheme.SPACING['sm'])
         
-        # Durum mesajı
+        # Durum mesajı - Modern kart
+        self.status_card = ModernTheme.create_card(self)
+        self.status_card.pack(fill="x", pady=ModernTheme.SPACING['md'])
+        
         self.status_label = ctk.CTkLabel(
-            self,
+            self.status_card,
             text="",
-            font=ctk.CTkFont(size=14)
+            font=ModernTheme.FONTS['body'],
+            text_color=ModernTheme.COLORS['text_secondary']
         )
-        self.status_label.pack(pady=10)
+        self.status_label.pack(padx=ModernTheme.SPACING['lg'], pady=ModernTheme.SPACING['md'])
     
     def connect(self):
         """Veritabanına bağlan"""
         try:
-            self.status_label.configure(text="Bağlanıyor...", text_color="yellow")
+            self.status_label.configure(
+                text="Bağlanıyor...",
+                text_color=ModernTheme.COLORS['loading']
+            )
+            self.status_card.configure(fg_color=ModernTheme.COLORS['bg_tertiary'])
             self.update()
             
             # Ayarları güncelle
@@ -202,23 +172,26 @@ class ConnectionFrame(ctk.CTkFrame):
                 db_name = Config.DB_FAYS
                 self.status_label.configure(
                     text="✓ Bağlantı başarılı!",
-                    text_color="green"
+                    text_color=ModernTheme.COLORS['success']
                 )
+                self.status_card.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
                 self.on_connection_changed(True, db_name)
                 messagebox.showinfo("Başarılı", "Veritabanı bağlantısı başarıyla kuruldu!")
             else:
                 self.status_label.configure(
                     text="✗ Bağlantı başarısız!",
-                    text_color="red"
+                    text_color=ModernTheme.COLORS['danger']
                 )
+                self.status_card.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
                 self.on_connection_changed(False)
                 messagebox.showerror("Hata", "Veritabanına bağlanılamadı!")
                 
         except Exception as e:
             self.status_label.configure(
                 text=f"✗ Hata: {str(e)}",
-                text_color="red"
+                text_color=ModernTheme.COLORS['danger']
             )
+            self.status_card.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
             self.on_connection_changed(False)
             messagebox.showerror("Hata", f"Bağlantı hatası:\n{str(e)}")
     
@@ -552,69 +525,84 @@ class SyncFrame(ctk.CTkFrame):
     """Stok eşitleme ekranı"""
     
     def __init__(self, parent, sync_engine):
-        super().__init__(parent)
-        self.pack(fill="both", expand=True, padx=20, pady=20)
+        super().__init__(parent, fg_color="transparent")
+        self.pack(fill="both", expand=True, padx=ModernTheme.SPACING['xl'], pady=ModernTheme.SPACING['xl'])
         
         self.sync_engine = sync_engine
         
         self.create_widgets()
     
     def create_widgets(self):
-        """Widget'ları oluştur"""
+        """Widget'ları oluştur - Modern tasarım"""
         
-        # Uyarı paneli
-        warning_frame = ctk.CTkFrame(self, fg_color="#8B0000")
-        warning_frame.pack(fill="x", padx=10, pady=10)
+        # Başlık
+        title = ctk.CTkLabel(
+            self,
+            text="Stok Eşitleme",
+            font=ModernTheme.FONTS['h2'],
+            text_color=ModernTheme.COLORS['text_primary']
+        )
+        title.pack(pady=(0, ModernTheme.SPACING['lg']))
+        
+        # Uyarı paneli - Modern tasarım
+        warning_card = ctk.CTkFrame(
+            self,
+            fg_color=ModernTheme.COLORS['warning'],
+            corner_radius=ModernTheme.RADIUS['md']
+        )
+        warning_card.pack(fill="x", pady=(0, ModernTheme.SPACING['lg']))
         
         warning_label = ctk.CTkLabel(
-            warning_frame,
-            text="⚠️ DİKKAT: Bu işlem FAYS WMS stokla rını LOGO ERP'ye göre eşitleyecektir!\n"
+            warning_card,
+            text="⚠️ DİKKAT: Bu işlem FAYS WMS stoklarını LOGO ERP'ye göre eşitleyecektir!\n"
                  "İşlem geri alınamaz! Devam etmeden önce yedek aldığınızdan emin olun.",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            text_color="white"
+            font=ModernTheme.FONTS['body'],
+            text_color="white",
+            justify="left"
         )
-        warning_label.pack(pady=15)
+        warning_label.pack(padx=ModernTheme.SPACING['lg'], pady=ModernTheme.SPACING['md'])
         
-        # Ayarlar paneli
-        settings_frame = ctk.CTkFrame(self)
-        settings_frame.pack(fill="x", padx=10, pady=20)
+        # Ayarlar paneli - Modern kart
+        settings_card = ModernTheme.create_card(self)
+        settings_card.pack(fill="x", pady=(0, ModernTheme.SPACING['lg']))
+        
+        settings_frame = ctk.CTkFrame(settings_card, fg_color="transparent")
+        settings_frame.pack(fill="x", padx=ModernTheme.SPACING['xl'], pady=ModernTheme.SPACING['xl'])
         
         # Depo seçimi
-        ctk.CTkLabel(
-            settings_frame,
-            text="Eşitlenecek Depo:",
-            font=ctk.CTkFont(size=16, weight="bold")
-        ).pack(pady=10)
+        depo_label = ModernTheme.create_section_title(settings_frame, "Eşitlenecek Depo")
+        depo_label.pack(anchor="w", pady=(0, ModernTheme.SPACING['sm']))
         
         self.warehouse_combo = ctk.CTkComboBox(
             settings_frame,
             values=[Config.DEFAULT_WAREHOUSE],
-            width=300,
-            font=ctk.CTkFont(size=14),
+            width=400,
+            height=40,
+            font=ModernTheme.FONTS['body'],
+            corner_radius=ModernTheme.RADIUS['md'],
             command=self.on_warehouse_changed
         )
-        self.warehouse_combo.pack(pady=10)
+        self.warehouse_combo.pack(fill="x", pady=(0, ModernTheme.SPACING['lg']))
         self.warehouse_combo.set(Config.DEFAULT_WAREHOUSE)
         
         # Depoları otomatik yükle
         self.auto_load_warehouses()
         
         # Raf seçimi (Sayım Fazlası için)
-        ctk.CTkLabel(
-            settings_frame,
-            text="Sayım Fazlası Rafı (LOGO stokları için):",
-            font=ctk.CTkFont(size=14, weight="bold")
-        ).pack(pady=(20, 5))
+        raf_label = ModernTheme.create_section_title(settings_frame, "Sayım Fazlası Rafı (LOGO stokları için)")
+        raf_label.pack(anchor="w", pady=(0, ModernTheme.SPACING['sm']))
         
         self.raf_combo = ctk.CTkComboBox(
             settings_frame,
             values=["Raf seçmek için depo seçin..."],
-            width=300,
-            font=ctk.CTkFont(size=14),
+            width=400,
+            height=40,
+            font=ModernTheme.FONTS['body'],
+            corner_radius=ModernTheme.RADIUS['md'],
             state="disabled",
             command=self.on_raf_changed
         )
-        self.raf_combo.pack(pady=5)
+        self.raf_combo.pack(fill="x", pady=(0, ModernTheme.SPACING['xl']))
         
         self.selected_raf_ref_no = None
         
@@ -622,40 +610,44 @@ class SyncFrame(ctk.CTkFrame):
         if self.warehouse_combo.get() and self.warehouse_combo.get() != "Tümü":
             self.on_warehouse_changed(self.warehouse_combo.get())
         
-        # Önizleme butonu
-        preview_btn = ctk.CTkButton(
-            settings_frame,
-            text="👁️ Önizleme Yap",
-            command=self.preview_sync,
-            width=200,
-            fg_color="orange",
-            hover_color="darkorange"
-        )
-        preview_btn.pack(pady=10)
+        # Butonlar
+        button_container = ctk.CTkFrame(settings_frame, fg_color="transparent")
+        button_container.pack(fill="x", pady=ModernTheme.SPACING['md'])
         
-        # Eşitleme butonu
-        self.sync_btn = ctk.CTkButton(
-            settings_frame,
-            text="🔄 EŞİTLEMEYİ BAŞLAT",
+        preview_btn = ModernTheme.create_warning_button(
+            button_container,
+            text="Önizleme Yap",
+            command=self.preview_sync,
+            width=200
+        )
+        preview_btn.pack(side="left", padx=ModernTheme.SPACING['sm'])
+        
+        self.sync_btn = ModernTheme.create_danger_button(
+            button_container,
+            text="EŞİTLEMEYİ BAŞLAT",
             command=self.start_sync,
             width=300,
             height=50,
-            font=ctk.CTkFont(size=18, weight="bold"),
-            fg_color="red",
-            hover_color="darkred"
+            font=ModernTheme.FONTS['h4']
         )
-        self.sync_btn.pack(pady=20)
+        self.sync_btn.pack(side="left", padx=ModernTheme.SPACING['sm'])
         
-        # Sonuç paneli
-        result_frame = ctk.CTkFrame(self)
-        result_frame.pack(fill="both", expand=True, padx=10, pady=10)
+        # Sonuç paneli - Modern kart
+        result_card = ModernTheme.create_card(self)
+        result_card.pack(fill="both", expand=True, pady=(0, 0))
+        
+        result_label = ModernTheme.create_section_title(result_card, "İşlem Sonuçları")
+        result_label.pack(anchor="w", padx=ModernTheme.SPACING['lg'], pady=(ModernTheme.SPACING['lg'], ModernTheme.SPACING['sm']))
         
         self.result_text = ctk.CTkTextbox(
-            result_frame,
-            font=ctk.CTkFont(size=12),
-            wrap="word"
+            result_card,
+            font=ModernTheme.FONTS['code'],
+            wrap="word",
+            corner_radius=ModernTheme.RADIUS['md'],
+            fg_color=ModernTheme.COLORS['bg_tertiary'],
+            text_color=ModernTheme.COLORS['text_primary']
         )
-        self.result_text.pack(fill="both", expand=True, padx=10, pady=10)
+        self.result_text.pack(fill="both", expand=True, padx=ModernTheme.SPACING['lg'], pady=(0, ModernTheme.SPACING['lg']))
         
         self.result_text.insert("1.0", "Eşitleme işlemi henüz başlatılmadı.\n\n"
                                       "İşlem Adımları:\n"
