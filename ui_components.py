@@ -123,18 +123,6 @@ class ConnectionFrame(ctk.CTkFrame):
         button_frame1 = ctk.CTkFrame(form_frame, fg_color="transparent")
         button_frame1.grid(row=5, column=0, columnspan=2, pady=15)
         
-        self.load_btn = ctk.CTkButton(
-            button_frame1,
-            text="📂 Kayıtlı Bağlantıyı Yükle",
-            command=self.load_secure_config,
-            width=200,
-            height=40,
-            font=ctk.CTkFont(size=14),
-            fg_color="#2196F3",
-            hover_color="#1976D2"
-        )
-        self.load_btn.pack(side="left", padx=10)
-        
         self.connect_btn = ctk.CTkButton(
             button_frame1,
             text="🔌 Bağlan",
@@ -210,11 +198,13 @@ class ConnectionFrame(ctk.CTkFrame):
             success = self.db_manager.connect()
             
             if success:
+                # Veritabanı adını al
+                db_name = Config.DB_FAYS
                 self.status_label.configure(
                     text="✓ Bağlantı başarılı!",
                     text_color="green"
                 )
-                self.on_connection_changed(True)
+                self.on_connection_changed(True, db_name)
                 messagebox.showinfo("Başarılı", "Veritabanı bağlantısı başarıyla kuruldu!")
             else:
                 self.status_label.configure(
@@ -268,12 +258,13 @@ class ConnectionFrame(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Hata", f"Kayıt hatası:\n{str(e)}")
     
-    def load_secure_config(self):
+    def load_secure_config(self, auto_connect=False):
         """Kaydedilmiş bağlantı bilgilerini yükle"""
         try:
             if not SecureConfig.config_exists():
-                messagebox.showwarning("Uyarı", "Kaydedilmiş bağlantı bilgisi bulunamadı!")
-                return
+                if not auto_connect:
+                    messagebox.showwarning("Uyarı", "Kaydedilmiş bağlantı bilgisi bulunamadı!")
+                return False
             
             success, result = SecureConfig.load_config()
             
@@ -294,12 +285,30 @@ class ConnectionFrame(ctk.CTkFrame):
                 self.fays_db_entry.delete(0, tk.END)
                 self.fays_db_entry.insert(0, result.get('DB_FAYS', 'FaysWMSAkturk'))
                 
-                messagebox.showinfo("Başarılı", "Bağlantı bilgileri yüklendi!\n"
-                                               "Şimdi 'Bağlan' butonuna tıklayabilirsiniz.")
+                if auto_connect:
+                    # Otomatik bağlan
+                    self.connect()
+                    return True
+                else:
+                    messagebox.showinfo("Başarılı", "Bağlantı bilgileri yüklendi!\n"
+                                                   "Şimdi 'Bağlan' butonuna tıklayabilirsiniz.")
+                    return True
             else:
-                messagebox.showerror("Hata", result)
+                if not auto_connect:
+                    messagebox.showerror("Hata", result)
+                return False
         except Exception as e:
-            messagebox.showerror("Hata", f"Yükleme hatası:\n{str(e)}")
+            if not auto_connect:
+                messagebox.showerror("Hata", f"Yükleme hatası:\n{str(e)}")
+            return False
+    
+    def auto_load_connection(self):
+        """Program başladığında otomatik olarak kayıtlı bağlantıyı yükle ve bağlan"""
+        try:
+            if SecureConfig.config_exists():
+                self.load_secure_config(auto_connect=True)
+        except Exception as e:
+            logger.warning(f"Otomatik bağlantı yükleme hatası: {e}")
     
     def delete_secure_config(self):
         """Kaydedilmiş bağlantı bilgilerini sil"""
@@ -587,14 +596,8 @@ class SyncFrame(ctk.CTkFrame):
         self.warehouse_combo.pack(pady=10)
         self.warehouse_combo.set(Config.DEFAULT_WAREHOUSE)
         
-        # Depoları yükle butonu
-        refresh_btn = ctk.CTkButton(
-            settings_frame,
-            text="🔄 Depoları Yükle",
-            command=self.load_warehouses,
-            width=200
-        )
-        refresh_btn.pack(pady=10)
+        # Depoları otomatik yükle
+        self.auto_load_warehouses()
         
         # Raf seçimi (Sayım Fazlası için)
         ctk.CTkLabel(
@@ -613,17 +616,11 @@ class SyncFrame(ctk.CTkFrame):
         )
         self.raf_combo.pack(pady=5)
         
-        # Raf yükle butonu
-        self.load_rafs_btn = ctk.CTkButton(
-            settings_frame,
-            text="🔄 Rafları Yükle",
-            command=self.load_rafs,
-            width=200,
-            state="disabled"
-        )
-        self.load_rafs_btn.pack(pady=5)
-        
         self.selected_raf_ref_no = None
+        
+        # Depo seçildiğinde rafları otomatik yükle
+        if self.warehouse_combo.get() and self.warehouse_combo.get() != "Tümü":
+            self.on_warehouse_changed(self.warehouse_combo.get())
         
         # Önizleme butonu
         preview_btn = ctk.CTkButton(
@@ -666,36 +663,34 @@ class SyncFrame(ctk.CTkFrame):
                                       "2. Önizleme yapın\n"
                                       "3. Eşitlemeyi başlatın\n")
     
-    def load_warehouses(self):
-        """Depoları yükle"""
+    def auto_load_warehouses(self):
+        """Depoları otomatik yükle"""
         try:
-            warehouses = self.sync_engine.get_warehouses()
-            if warehouses:
-                self.warehouse_combo.configure(values=warehouses)
-                messagebox.showinfo("Başarılı", f"{len(warehouses)} depo yüklendi")
-                # Depo seçildiğinde rafları yükle
-                self.on_warehouse_changed(self.warehouse_combo.get())
+            if self.sync_engine.db.conn_fays:
+                warehouses = self.sync_engine.get_warehouses()
+                if warehouses:
+                    self.warehouse_combo.configure(values=warehouses)
+                    logger.info(f"{len(warehouses)} depo otomatik yüklendi")
         except Exception as e:
-            messagebox.showerror("Hata", f"Depo listesi yüklenemedi:\n{str(e)}")
+            logger.warning(f"Depo listesi otomatik yüklenemedi: {e}")
     
     def on_warehouse_changed(self, warehouse):
-        """Depo değiştiğinde rafları yükle"""
+        """Depo değiştiğinde rafları otomatik yükle"""
         if warehouse and warehouse != "Tümü":
-            self.load_rafs_btn.configure(state="normal")
             self.raf_combo.configure(state="normal")
-            self.load_rafs()
+            self.load_rafs(silent=True)  # Otomatik yükleme, mesaj gösterme
         else:
-            self.load_rafs_btn.configure(state="disabled")
             self.raf_combo.configure(state="disabled")
             self.raf_combo.configure(values=["Raf seçmek için depo seçin..."])
             self.selected_raf_ref_no = None
     
-    def load_rafs(self):
-        """Seçilen depoya göre rafları yükle"""
+    def load_rafs(self, silent=False):
+        """Seçilen depoya göre rafları otomatik yükle"""
         try:
             warehouse = self.warehouse_combo.get()
             if not warehouse or warehouse == "Tümü":
-                messagebox.showwarning("Uyarı", "Önce bir depo seçmelisiniz!")
+                if not silent:
+                    messagebox.showwarning("Uyarı", "Önce bir depo seçmelisiniz!")
                 return
             
             raflar = self.sync_engine.db.get_raflar(warehouse)
@@ -710,13 +705,16 @@ class SyncFrame(ctk.CTkFrame):
                     self.raf_combo.set(raf_values[0])
                     self.selected_raf_ref_no = raflar[0]['idNo']
                 
-                messagebox.showinfo("Başarılı", f"{len(raflar)} adet raf yüklendi")
+                logger.info(f"{len(raflar)} adet raf otomatik yüklendi - Depo: {warehouse}")
             else:
                 self.raf_combo.configure(values=["Bu depoda raf bulunamadı"])
                 self.selected_raf_ref_no = None
-                messagebox.showwarning("Uyarı", "Bu depoda raf bulunamadı!")
+                if not silent:
+                    messagebox.showwarning("Uyarı", "Bu depoda raf bulunamadı!")
         except Exception as e:
-            messagebox.showerror("Hata", f"Raf listesi yüklenemedi:\n{str(e)}")
+            logger.warning(f"Raf listesi yüklenemedi: {e}")
+            if not silent:
+                messagebox.showerror("Hata", f"Raf listesi yüklenemedi:\n{str(e)}")
     
     def on_raf_changed(self, raf_text):
         """Raf seçildiğinde RafRefNo'yu kaydet"""
@@ -925,19 +923,15 @@ class QueryEditorFrame(ctk.CTkFrame):
         )
         save_btn.pack(side="left", padx=10)
         
-        # INSERT Şablonları butonu
-        templates_btn = ctk.CTkButton(
-            top_panel,
-            text="📝 INSERT Şablonları",
-            command=self.open_templates_editor,
-            width=160,
-            fg_color="#9C27B0",
-            hover_color="#7B1FA2"
-        )
-        templates_btn.pack(side="left", padx=10)
+        # Ana içerik - TabView (SQL Sorgusu ve INSERT Şablonları)
+        main_tabview = ctk.CTkTabview(self)
+        main_tabview.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # SQL Sorgusu sekmesi
+        sql_tab = main_tabview.add("SQL Sorgusu")
         
         # Sorgu editörü
-        editor_frame = ctk.CTkFrame(self)
+        editor_frame = ctk.CTkFrame(sql_tab)
         editor_frame.pack(fill="both", expand=True, padx=10, pady=10)
         
         ctk.CTkLabel(
@@ -958,18 +952,103 @@ class QueryEditorFrame(ctk.CTkFrame):
         
         # Sonuç alanı
         result_label = ctk.CTkLabel(
-            self,
+            sql_tab,
             text="Sorgu Sonucu:",
             font=ctk.CTkFont(size=14, weight="bold")
         )
         result_label.pack(anchor="w", padx=20, pady=5)
         
         self.result_text = ctk.CTkTextbox(
-            self,
+            sql_tab,
             font=ctk.CTkFont(family="Courier", size=11),
             height=200
         )
         self.result_text.pack(fill="both", expand=True, padx=10, pady=10)
+        
+        # INSERT Şablonları sekmesi
+        templates_tab = main_tabview.add("INSERT Şablonları")
+        
+        # Açıklama
+        info = ctk.CTkLabel(
+            templates_tab,
+            text="Bu şablonlar stok eşitleme sırasında kullanılır. {Değişken} formatındaki alanlar otomatik doldurulur.",
+            font=ctk.CTkFont(size=12),
+            text_color="gray"
+        )
+        info.pack(pady=10)
+        
+        # Şablonları yükle
+        templates = SQLTemplates.load_templates()
+        
+        # Notebook (tabs) for templates
+        template_notebook = ctk.CTkTabview(templates_tab)
+        template_notebook.pack(fill="both", expand=True, padx=20, pady=10)
+        
+        # stk_Fis INSERT şablonu
+        tab1 = template_notebook.add("stk_Fis INSERT")
+        ctk.CTkLabel(
+            tab1,
+            text="stk_Fis Tablosu INSERT Şablonu:",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", padx=10, pady=5)
+        
+        self.fis_text = ctk.CTkTextbox(
+            tab1,
+            font=ctk.CTkFont(family="Courier", size=11),
+            wrap="none"
+        )
+        self.fis_text.pack(fill="both", expand=True, padx=10, pady=10)
+        self.fis_text.insert("1.0", templates.get("stk_Fis_INSERT", ""))
+        
+        # stk_FisLines INSERT şablonu
+        tab2 = template_notebook.add("stk_FisLines INSERT")
+        ctk.CTkLabel(
+            tab2,
+            text="stk_FisLines Tablosu INSERT Şablonu:",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", padx=10, pady=5)
+        
+        self.fislines_text = ctk.CTkTextbox(
+            tab2,
+            font=ctk.CTkFont(family="Courier", size=11),
+            wrap="none"
+        )
+        self.fislines_text.pack(fill="both", expand=True, padx=10, pady=10)
+        self.fislines_text.insert("1.0", templates.get("stk_FisLines_INSERT", ""))
+        
+        # Açıklamalar sekmesi
+        tab3 = template_notebook.add("Fiş Açıklamaları")
+        ctk.CTkLabel(
+            tab3,
+            text="Sayım Eksiği (FisTuru=51) Açıklaması:",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", padx=10, pady=5)
+        
+        self.eksik_entry = ctk.CTkEntry(tab3, width=600)
+        self.eksik_entry.pack(padx=10, pady=5)
+        self.eksik_entry.insert(0, templates.get("Sayim_Eksigi_Aciklama", ""))
+        
+        ctk.CTkLabel(
+            tab3,
+            text="Sayım Fazlası (FisTuru=50) Açıklaması:",
+            font=ctk.CTkFont(size=14, weight="bold")
+        ).pack(anchor="w", padx=10, pady=(20, 5))
+        
+        self.fazla_entry = ctk.CTkEntry(tab3, width=600)
+        self.fazla_entry.pack(padx=10, pady=5)
+        self.fazla_entry.insert(0, templates.get("Sayim_Fazlasi_Aciklama", ""))
+        
+        # Kaydet butonu
+        save_templates_btn = ctk.CTkButton(
+            templates_tab,
+            text="💾 Şablonları Kaydet",
+            command=self.save_templates,
+            width=200,
+            height=40,
+            fg_color="green",
+            hover_color="darkgreen"
+        )
+        save_templates_btn.pack(pady=15)
     
     def load_query_template(self, choice):
         """Sorgu şablonunu yükle"""
@@ -1079,157 +1158,24 @@ class QueryEditorFrame(ctk.CTkFrame):
         except Exception as e:
             messagebox.showerror("Hata", f"Kaydetme hatası:\n{str(e)}")
     
-    def open_templates_editor(self):
-        """INSERT şablonlarını düzenle"""
+    def save_templates(self):
+        """INSERT şablonlarını kaydet"""
         try:
-            # Yeni pencere oluştur
-            editor_window = ctk.CTkToplevel(self)
-            editor_window.title("INSERT Şablonları Düzenleyici")
-            editor_window.geometry("900x700")
+            new_templates = {
+                "stk_Fis_INSERT": self.fis_text.get("1.0", "end-1c"),
+                "stk_FisLines_INSERT": self.fislines_text.get("1.0", "end-1c"),
+                "Sayim_Eksigi_Aciklama": self.eksik_entry.get(),
+                "Sayim_Fazlasi_Aciklama": self.fazla_entry.get()
+            }
             
-            # Başlık
-            title = ctk.CTkLabel(
-                editor_window,
-                text="SQL INSERT Şablonları",
-                font=ctk.CTkFont(size=20, weight="bold")
-            )
-            title.pack(pady=15)
+            success, message = SQLTemplates.save_templates(new_templates)
             
-            # Açıklama
-            info = ctk.CTkLabel(
-                editor_window,
-                text="Bu şablonlar stok eşitleme sırasında kullanılır. {Değişken} formatındaki alanlar otomatik doldurulur.",
-                font=ctk.CTkFont(size=12),
-                text_color="gray"
-            )
-            info.pack(pady=5)
-            
-            # Şablonları yükle
-            templates = SQLTemplates.load_templates()
-            
-            # Notebook (tabs)
-            notebook = ctk.CTkTabview(editor_window)
-            notebook.pack(fill="both", expand=True, padx=20, pady=10)
-            
-            # stk_Fis INSERT şablonu
-            tab1 = notebook.add("stk_Fis INSERT")
-            ctk.CTkLabel(
-                tab1,
-                text="stk_Fis Tablosu INSERT Şablonu:",
-                font=ctk.CTkFont(size=14, weight="bold")
-            ).pack(anchor="w", padx=10, pady=5)
-            
-            fis_text = ctk.CTkTextbox(
-                tab1,
-                font=ctk.CTkFont(family="Courier", size=11),
-                wrap="none"
-            )
-            fis_text.pack(fill="both", expand=True, padx=10, pady=10)
-            fis_text.insert("1.0", templates.get("stk_Fis_INSERT", ""))
-            
-            # stk_FisLines INSERT şablonu
-            tab2 = notebook.add("stk_FisLines INSERT")
-            ctk.CTkLabel(
-                tab2,
-                text="stk_FisLines Tablosu INSERT Şablonu:",
-                font=ctk.CTkFont(size=14, weight="bold")
-            ).pack(anchor="w", padx=10, pady=5)
-            
-            fislines_text = ctk.CTkTextbox(
-                tab2,
-                font=ctk.CTkFont(family="Courier", size=11),
-                wrap="none"
-            )
-            fislines_text.pack(fill="both", expand=True, padx=10, pady=10)
-            fislines_text.insert("1.0", templates.get("stk_FisLines_INSERT", ""))
-            
-            # Açıklamalar sekmesi
-            tab3 = notebook.add("Fiş Açıklamaları")
-            ctk.CTkLabel(
-                tab3,
-                text="Sayım Eksiği (FisTuru=51) Açıklaması:",
-                font=ctk.CTkFont(size=14, weight="bold")
-            ).pack(anchor="w", padx=10, pady=5)
-            
-            eksik_entry = ctk.CTkEntry(tab3, width=600)
-            eksik_entry.pack(padx=10, pady=5)
-            eksik_entry.insert(0, templates.get("Sayim_Eksigi_Aciklama", ""))
-            
-            ctk.CTkLabel(
-                tab3,
-                text="Sayım Fazlası (FisTuru=50) Açıklaması:",
-                font=ctk.CTkFont(size=14, weight="bold")
-            ).pack(anchor="w", padx=10, pady=(20, 5))
-            
-            fazla_entry = ctk.CTkEntry(tab3, width=600)
-            fazla_entry.pack(padx=10, pady=5)
-            fazla_entry.insert(0, templates.get("Sayim_Fazlasi_Aciklama", ""))
-            
-            # Butonlar
-            button_frame = ctk.CTkFrame(editor_window, fg_color="transparent")
-            button_frame.pack(pady=15)
-            
-            def save_templates():
-                try:
-                    new_templates = {
-                        "stk_Fis_INSERT": fis_text.get("1.0", "end-1c"),
-                        "stk_FisLines_INSERT": fislines_text.get("1.0", "end-1c"),
-                        "Sayim_Eksigi_Aciklama": eksik_entry.get(),
-                        "Sayim_Fazlasi_Aciklama": fazla_entry.get()
-                    }
-                    
-                    success, message = SQLTemplates.save_templates(new_templates)
-                    
-                    if success:
-                        messagebox.showinfo("Başarılı", "Şablonlar kaydedildi!")
-                        editor_window.destroy()
-                    else:
-                        messagebox.showerror("Hata", message)
-                except Exception as e:
-                    messagebox.showerror("Hata", f"Kayıt hatası:\n{str(e)}")
-            
-            def reset_templates():
-                response = messagebox.askyesno(
-                    "Onay",
-                    "Şablonları varsayılan değerlere sıfırlamak istediğinize emin misiniz?"
-                )
-                if response:
-                    success, message = SQLTemplates.reset_to_default()
-                    if success:
-                        messagebox.showinfo("Başarılı", "Şablonlar sıfırlandı!\nPencereyi kapatıp tekrar açın.")
-                    else:
-                        messagebox.showerror("Hata", message)
-            
-            save_btn = ctk.CTkButton(
-                button_frame,
-                text="💾 Kaydet",
-                command=save_templates,
-                width=150,
-                fg_color="green",
-                hover_color="darkgreen"
-            )
-            save_btn.pack(side="left", padx=10)
-            
-            reset_btn = ctk.CTkButton(
-                button_frame,
-                text="🔄 Varsayılana Dön",
-                command=reset_templates,
-                width=150
-            )
-            reset_btn.pack(side="left", padx=10)
-            
-            close_btn = ctk.CTkButton(
-                button_frame,
-                text="❌ Kapat",
-                command=editor_window.destroy,
-                width=150,
-                fg_color="gray",
-                hover_color="darkgray"
-            )
-            close_btn.pack(side="left", padx=10)
-            
+            if success:
+                messagebox.showinfo("Başarılı", "Şablonlar kaydedildi!")
+            else:
+                messagebox.showerror("Hata", message)
         except Exception as e:
-            messagebox.showerror("Hata", f"Şablon editörü açılamadı:\n{str(e)}")
+            messagebox.showerror("Hata", f"Kayıt hatası:\n{str(e)}")
 
 
 class SettingsFrame(ctk.CTkFrame):

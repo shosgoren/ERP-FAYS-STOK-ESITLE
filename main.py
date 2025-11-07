@@ -62,15 +62,25 @@ class StockSyncApp(ctk.CTk):
         """UI bileşenlerini oluştur"""
         
         # Ana container
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(1, weight=1)
+        self.grid_columnconfigure(0, weight=1)
         
-        # Sol menü paneli
-        self.create_sidebar()
+        # Üst başlık çubuğu - FAYS Veritabanı adı
+        self.title_frame = ctk.CTkFrame(self, height=50, corner_radius=0)
+        self.title_frame.grid(row=0, column=0, sticky="ew", padx=0, pady=0)
+        self.title_frame.grid_columnconfigure(0, weight=1)
+        
+        self.db_title_label = ctk.CTkLabel(
+            self.title_frame,
+            text="FAYS Veritabanı: Bağlantı Yok",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color="gray"
+        )
+        self.db_title_label.pack(side="left", padx=20, pady=15)
         
         # Ana içerik alanı - Tab View
         self.tabview = ctk.CTkTabview(self, width=1000)
-        self.tabview.grid(row=0, column=1, padx=20, pady=20, sticky="nsew")
+        self.tabview.grid(row=1, column=0, padx=20, pady=20, sticky="nsew")
         
         # Tab'leri oluştur
         self.tab_connection = self.tabview.add("Bağlantı")
@@ -104,124 +114,26 @@ class StockSyncApp(ctk.CTk):
         self.settings_frame = SettingsFrame(
             self.tab_settings
         )
+        
+        # Program başladığında otomatik bağlantı yükle
+        self.connection_frame.auto_load_connection()
     
-    def create_sidebar(self):
-        """Sol menü panelini oluştur"""
-        sidebar = ctk.CTkFrame(self, width=200, corner_radius=0)
-        sidebar.grid(row=0, column=0, sticky="nsew")
-        sidebar.grid_rowconfigure(8, weight=1)
-        
-        # Logo/Başlık
-        title_label = ctk.CTkLabel(
-            sidebar,
-            text="STOK EŞİTLEME\nSİSTEMİ",
-            font=ctk.CTkFont(size=20, weight="bold")
-        )
-        title_label.grid(row=0, column=0, padx=20, pady=(20, 10))
-        
-        # Versiyon
-        version_label = ctk.CTkLabel(
-            sidebar,
-            text="v1.0.0",
-            font=ctk.CTkFont(size=12)
-        )
-        version_label.grid(row=1, column=0, padx=20, pady=(0, 30))
-        
-        # Durum göstergesi
-        self.status_label = ctk.CTkLabel(
-            sidebar,
-            text="● Bağlantı Yok",
-            text_color="red",
-            font=ctk.CTkFont(size=14)
-        )
-        self.status_label.grid(row=2, column=0, padx=20, pady=10)
-        
-        # Hızlı erişim butonları
-        ctk.CTkLabel(
-            sidebar,
-            text="Hızlı İşlemler",
-            font=ctk.CTkFont(size=14, weight="bold")
-        ).grid(row=3, column=0, padx=20, pady=(20, 10))
-        
-        connect_btn = ctk.CTkButton(
-            sidebar,
-            text="🔌 Bağlan",
-            command=self.quick_connect,
-            width=160
-        )
-        connect_btn.grid(row=4, column=0, padx=20, pady=5)
-        
-        compare_btn = ctk.CTkButton(
-            sidebar,
-            text="📊 Karşılaştır",
-            command=self.quick_compare,
-            width=160
-        )
-        compare_btn.grid(row=5, column=0, padx=20, pady=5)
-        
-        sync_btn = ctk.CTkButton(
-            sidebar,
-            text="🔄 Eşitle",
-            command=self.quick_sync,
-            width=160,
-            fg_color="green",
-            hover_color="darkgreen"
-        )
-        sync_btn.grid(row=6, column=0, padx=20, pady=5)
-        
-        # Alt bilgi
-        info_label = ctk.CTkLabel(
-            sidebar,
-            text="LOGO ERP ↔ FAYS WMS\nStok Senkronizasyonu",
-            font=ctk.CTkFont(size=11),
-            text_color="gray"
-        )
-        info_label.grid(row=9, column=0, padx=20, pady=(0, 20))
-    
-    def on_connection_changed(self, connected):
+    def on_connection_changed(self, connected, db_name=None):
         """Bağlantı durumu değiştiğinde çağrılır"""
         if connected:
-            self.status_label.configure(
-                text="● Bağlı",
+            db_display = db_name if db_name else "Bağlı"
+            self.db_title_label.configure(
+                text=f"FAYS Veritabanı: {db_display}",
                 text_color="green"
             )
-            logger.info("Veritabanı bağlantısı başarılı")
+            logger.info(f"Veritabanı bağlantısı başarılı: {db_display}")
         else:
-            self.status_label.configure(
-                text="● Bağlantı Yok",
-                text_color="red"
+            self.db_title_label.configure(
+                text="FAYS Veritabanı: Bağlantı Yok",
+                text_color="gray"
             )
             logger.warning("Veritabanı bağlantısı kesildi")
     
-    def quick_connect(self):
-        """Hızlı bağlantı"""
-        self.tabview.set("Bağlantı")
-        self.connection_frame.connect()
-    
-    def quick_compare(self):
-        """Hızlı karşılaştırma"""
-        if not self.db_manager.conn_fays or not self.db_manager.conn_logo:
-            messagebox.showwarning(
-                "Uyarı",
-                "Önce veritabanına bağlanmalısınız!"
-            )
-            self.tabview.set("Bağlantı")
-            return
-        
-        self.tabview.set("Stok Karşılaştırma")
-        self.comparison_frame.compare()
-    
-    def quick_sync(self):
-        """Hızlı eşitleme"""
-        if not self.db_manager.conn_fays or not self.db_manager.conn_logo:
-            messagebox.showwarning(
-                "Uyarı",
-                "Önce veritabanına bağlanmalısınız!"
-            )
-            self.tabview.set("Bağlantı")
-            return
-        
-        self.tabview.set("Stok Eşitleme")
     
     def on_closing(self):
         """Uygulama kapanırken"""
