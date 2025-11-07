@@ -47,8 +47,25 @@ class StockSyncApp(ctk.CTk):
         
         # Pencere ayarları
         self.title(Config.APP_TITLE)
-        # Tam ekran açılsın
-        self.state("zoomed")  # Windows'ta tam ekran
+        
+        # Tam ekran açılsın - Windows için
+        try:
+            import sys
+            if sys.platform == "win32":
+                # Windows'ta tam ekran için
+                self.state("zoomed")
+            else:
+                # Diğer platformlarda maksimum boyut
+                self.attributes("-zoomed", True)
+        except:
+            # Fallback: Ekran boyutunu al ve pencereyi büyüt
+            try:
+                width = self.winfo_screenwidth()
+                height = self.winfo_screenheight()
+                self.geometry(f"{width}x{height}")
+            except:
+                self.geometry("1600x1000")
+        
         # Light tema için arka plan rengi
         self.configure(fg_color=ModernTheme.COLORS['bg_primary'])
         
@@ -125,7 +142,7 @@ class StockSyncApp(ctk.CTk):
         self.db_title_label.pack(side="left")
         
         # Ana içerik alanı - Tab View
-        self.tabview = ctk.CTkTabview(self, width=1000)
+        self.tabview = ctk.CTkTabview(self)
         self.tabview.grid(row=1, column=0, padx=20, pady=20, sticky="nsew")
         
         # Tab'leri oluştur

@@ -751,9 +751,9 @@ class SyncFrame(ctk.CTkFrame):
         )
         self.sync_btn.pack(side="left", padx=ModernTheme.SPACING['sm'])
         
-        # Sonuç paneli - Modern kart
+        # Sonuç paneli - Modern kart (alt kısımda, genişleyebilir)
         result_card = ModernTheme.create_card(self)
-        result_card.pack(fill="both", expand=True, pady=(0, 0))
+        result_card.pack(fill="both", expand=True, pady=(ModernTheme.SPACING['lg'], 0))
         
         result_label = ModernTheme.create_section_title(result_card, "İşlem Sonuçları")
         result_label.pack(anchor="w", padx=ModernTheme.SPACING['lg'], pady=(ModernTheme.SPACING['lg'], ModernTheme.SPACING['sm']))
@@ -764,7 +764,8 @@ class SyncFrame(ctk.CTkFrame):
             wrap="word",
             corner_radius=ModernTheme.RADIUS['md'],
             fg_color='#FFFFFF',  # Beyaz arka plan (light tema)
-            text_color=ModernTheme.COLORS['text_primary']
+            text_color=ModernTheme.COLORS['text_primary'],
+            height=200  # Minimum yükseklik
         )
         self.result_text.pack(fill="both", expand=True, padx=ModernTheme.SPACING['lg'], pady=(0, ModernTheme.SPACING['lg']))
         

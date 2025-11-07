@@ -24,13 +24,29 @@ jobs:
         pip install -r requirements.txt
         pip install pyinstaller
     
+    - name: Create Icon
+      run: |
+        python create_icon.py
+        if (Test-Path app_icon.ico) {
+          $iconSize = (Get-Item app_icon.ico).Length
+          Write-Host "Icon dosyası oluşturuldu: $iconSize bytes"
+          if ($iconSize -lt 1000) {
+            Write-Host "UYARI: Icon dosyası çok küçük!"
+          }
+        } else {
+          Write-Host "HATA: Icon dosyası oluşturulamadı!"
+        }
+    
     - name: Build EXE
       run: |
         if (Test-Path app_icon.ico) {
           Write-Host "Icon dosyası bulundu, icon ile build yapılıyor"
           $iconPath = (Resolve-Path app_icon.ico).Path
+          $iconSize = (Get-Item app_icon.ico).Length
           Write-Host "Icon yolu: $iconPath"
-          Write-Host "Icon dosyası boyutu: $((Get-Item app_icon.ico).Length) bytes"
+          Write-Host "Icon dosyası boyutu: $iconSize bytes"
+          
+          # PyInstaller'a icon'u mutlak yol ile ver
           pyinstaller --onefile --windowed --name StokEsitleme `
             --icon="$iconPath" `
             --add-data "config.py;." `
