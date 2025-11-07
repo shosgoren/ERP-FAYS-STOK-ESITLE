@@ -52,6 +52,16 @@ class StockSyncApp(ctk.CTk):
         # Light tema için arka plan rengi
         self.configure(fg_color=ModernTheme.COLORS['bg_primary'])
         
+        # Icon ayarla
+        try:
+            import os
+            icon_path = os.path.join(os.path.dirname(__file__), 'app_icon.ico')
+            if os.path.exists(icon_path):
+                self.iconbitmap(icon_path)
+                logger.info(f"Icon yüklendi: {icon_path}")
+        except Exception as e:
+            logger.warning(f"Icon yüklenemedi: {e}")
+        
         # Veritabanı yöneticisi
         self.db_manager = DatabaseManager()
         self.sync_engine = StockSyncEngine(self.db_manager)
