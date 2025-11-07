@@ -350,15 +350,6 @@ class ComparisonFrame(ctk.CTkFrame):
         self.warehouse_combo.pack(side="left", padx=10)
         self.warehouse_combo.set("Tümü")
         
-        # Depoları yükle butonu
-        refresh_warehouses_btn = ctk.CTkButton(
-            top_panel,
-            text="🔄",
-            width=40,
-            command=self.load_warehouses
-        )
-        refresh_warehouses_btn.pack(side="left", padx=5)
-        
         # Karşılaştır butonu
         self.compare_btn = ctk.CTkButton(
             top_panel,

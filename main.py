@@ -47,7 +47,8 @@ class StockSyncApp(ctk.CTk):
         
         # Pencere ayarları
         self.title(Config.APP_TITLE)
-        self.geometry("1600x1000")
+        # Tam ekran açılsın
+        self.state("zoomed")  # Windows'ta tam ekran
         # Light tema için arka plan rengi
         self.configure(fg_color=ModernTheme.COLORS['bg_primary'])
         
