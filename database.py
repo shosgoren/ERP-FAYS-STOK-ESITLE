@@ -625,6 +625,34 @@ class DatabaseManager:
             logger.error(f"BarkodNo alma hatası: {e}")
             return ''
     
+    def get_logo_stocks(self, depo_adi):
+        """LOGO'dan doğrudan stokları al (pozitif stoklar)"""
+        query = """
+        SELECT     
+            AMBARLAR.NAME AS [AMBAR ADI],
+            ITEMS.CODE AS [MALZEME KODU], 
+            RTRIM(LTRIM(ITEMS.NAME)) AS [MALZEME ADI], 
+            ISNULL(ITEMS.STGRPCODE,'') AS [GRUP KODU],
+            ROUND(SUM(ST.ONHAND),2) AS [LOGO FİİLİ STOK]
+        FROM         
+            GOLD..LG_013_ITEMS AS ITEMS WITH (NOLOCK)		 
+            INNER JOIN GOLD..LV_013_01_STINVTOT AS ST WITH (NOLOCK) ON ST.STOCKREF = ITEMS.LOGICALREF 
+            LEFT JOIN GOLD..L_CAPIWHOUSE AS AMBARLAR WITH (NOLOCK) ON AMBARLAR.NR = ST.INVENNO AND AMBARLAR.FIRMNR = '013' 
+        WHERE ST.INVENNO <> -1 
+          AND ITEMS.ACTIVE=0
+          AND (AMBARLAR.NAME = ? OR AMBARLAR.NAME COLLATE Turkish_CI_AS = ?)
+        GROUP BY  
+            ITEMS.CODE, 
+            ITEMS.NAME, 
+            ITEMS.STGRPCODE, 
+            ST.INVENNO, 
+            AMBARLAR.NAME
+        HAVING ROUND(SUM(ST.ONHAND),2) > 0
+        ORDER BY ITEMS.CODE
+        """
+        
+        return self.execute_query(query, database='LOGO', params=(depo_adi, depo_adi))
+    
     def get_fays_stocks_with_raf(self, depo_adi):
         """FAYS özet raporda bulunan stokları raf bilgisiyle birlikte al"""
         query = """

@@ -91,12 +91,14 @@ class StockSyncEngine:
             # ADIM 2: LOGO stoklarına göre giriş fişi oluştur
             logger.info("ADIM 2: LOGO stoklarına göre giriş fişi oluşturuluyor...")
             
-            # Karşılaştırma yapılmamışsa yap
+            # ADIM 1'den sonra FAYS stokları 0 oldu, şimdi doğrudan LOGO'dan stokları al
+            # Karşılaştırma yapılmamışsa yap (sadece bilgi amaçlı)
             if df_comparison is None:
                 df_comparison = self.compare_stocks(warehouse)
             
-            # Sadece LOGO'da olan stokları al (FAYS'da olmayan veya eksik olanlar)
-            df_logo_stocks = df_comparison[df_comparison['LOGO FİİLİ STOK'] > 0].copy()
+            # ÖNEMLİ: Doğrudan LOGO'dan stokları al (ADIM 1'den sonra FAYS=0 olduğu için)
+            # Karşılaştırma sonucu yerine, LOGO'daki TÜM pozitif stokları al
+            df_logo_stocks = self.db.get_logo_stocks(warehouse)
             
             if len(df_logo_stocks) > 0:
                 logger.info(f"LOGO'da {len(df_logo_stocks)} adet stok kalemi bulundu, giriş fişi oluşturulacak")
