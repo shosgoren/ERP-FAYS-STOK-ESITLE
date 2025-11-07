@@ -1250,60 +1250,79 @@ class SettingsFrame(ctk.CTkFrame):
         form_frame.pack(fill="both", expand=True, padx=ModernTheme.SPACING['xl'], pady=ModernTheme.SPACING['xl'])
         
         # Tema
-        ctk.CTkLabel(
+        theme_label = ModernTheme.create_label(
             form_frame,
-            text="Tema:",
-            font=ctk.CTkFont(size=14)
-        ).grid(row=0, column=0, padx=20, pady=15, sticky="w")
+            "Tema:",
+            size='body',
+            color='text_primary'
+        )
+        theme_label.grid(row=0, column=0, padx=ModernTheme.SPACING['md'], 
+                        pady=ModernTheme.SPACING['md'], sticky="w")
         
         self.theme_combo = ctk.CTkComboBox(
             form_frame,
-            values=["dark", "light"],
-            width=300
+            values=["light", "dark"],
+            width=400,
+            height=40,
+            font=ModernTheme.get_font('body'),
+            corner_radius=ModernTheme.RADIUS['md']
         )
-        self.theme_combo.grid(row=0, column=1, padx=20, pady=15)
-        self.theme_combo.set("dark")
+        self.theme_combo.grid(row=0, column=1, padx=ModernTheme.SPACING['md'], 
+                              pady=ModernTheme.SPACING['md'], sticky="ew")
+        self.theme_combo.set("light")  # Varsayılan light tema
         self.theme_combo.configure(command=self.change_theme)
         
         # Varsayılan Depo
-        ctk.CTkLabel(
+        depo_label = ModernTheme.create_label(
             form_frame,
-            text="Varsayılan Depo:",
-            font=ctk.CTkFont(size=14)
-        ).grid(row=1, column=0, padx=20, pady=15, sticky="w")
-        
-        self.default_warehouse_entry = ctk.CTkEntry(
-            form_frame,
-            width=300
+            "Varsayılan Depo:",
+            size='body',
+            color='text_primary'
         )
-        self.default_warehouse_entry.grid(row=1, column=1, padx=20, pady=15)
+        depo_label.grid(row=1, column=0, padx=ModernTheme.SPACING['md'], 
+                       pady=ModernTheme.SPACING['md'], sticky="w")
+        
+        self.default_warehouse_entry = ModernTheme.create_modern_entry(
+            form_frame,
+            placeholder="MERKEZ",
+            width=400
+        )
+        self.default_warehouse_entry.grid(row=1, column=1, padx=ModernTheme.SPACING['md'], 
+                                          pady=ModernTheme.SPACING['md'], sticky="ew")
         self.default_warehouse_entry.insert(0, Config.DEFAULT_WAREHOUSE)
         
         # Log Seviyesi
-        ctk.CTkLabel(
+        log_label = ModernTheme.create_label(
             form_frame,
-            text="Log Seviyesi:",
-            font=ctk.CTkFont(size=14)
-        ).grid(row=2, column=0, padx=20, pady=15, sticky="w")
+            "Log Seviyesi:",
+            size='body',
+            color='text_primary'
+        )
+        log_label.grid(row=2, column=0, padx=ModernTheme.SPACING['md'], 
+                      pady=ModernTheme.SPACING['md'], sticky="w")
         
         self.log_level_combo = ctk.CTkComboBox(
             form_frame,
             values=["DEBUG", "INFO", "WARNING", "ERROR"],
-            width=300
+            width=400,
+            height=40,
+            font=ModernTheme.get_font('body'),
+            corner_radius=ModernTheme.RADIUS['md']
         )
-        self.log_level_combo.grid(row=2, column=1, padx=20, pady=15)
+        self.log_level_combo.grid(row=2, column=1, padx=ModernTheme.SPACING['md'], 
+                                  pady=ModernTheme.SPACING['md'], sticky="ew")
         self.log_level_combo.set(Config.LOG_LEVEL)
         
+        form_frame.grid_columnconfigure(1, weight=1)
+        
         # Kaydet butonu
-        save_btn = ctk.CTkButton(
+        save_btn = ModernTheme.create_primary_button(
             form_frame,
-            text="💾 Ayarları Kaydet",
+            text="Ayarları Kaydet",
             command=self.save_settings,
-            width=200,
-            height=40,
-            font=ctk.CTkFont(size=16, weight="bold")
+            width=200
         )
-        save_btn.grid(row=3, column=0, columnspan=2, pady=30)
+        save_btn.grid(row=3, column=0, columnspan=2, pady=ModernTheme.SPACING['xl'])
         
         # Bilgi paneli - Modern kart
         info_card = ModernTheme.create_card(self)
