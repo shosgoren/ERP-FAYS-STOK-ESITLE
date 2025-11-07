@@ -116,97 +116,87 @@ class ModernTheme:
     @staticmethod
     def create_primary_button(parent, text, command, **kwargs):
         """Ana buton stili"""
-        return ctk.CTkButton(
-            parent,
-            text=text,
-            command=command,
-            font=ModernTheme.get_font('body'),
-            fg_color=ModernTheme.COLORS['primary'],
-            hover_color=ModernTheme.COLORS['primary_hover'],
-            corner_radius=ModernTheme.RADIUS['md'],
-            height=40,
-            **kwargs
-        )
+        default_kwargs = {
+            'font': ModernTheme.get_font('body'),
+            'fg_color': ModernTheme.COLORS['primary'],
+            'hover_color': ModernTheme.COLORS['primary_hover'],
+            'corner_radius': ModernTheme.RADIUS['md'],
+            'height': 40,
+        }
+        default_kwargs.update(kwargs)
+        return ctk.CTkButton(parent, text=text, command=command, **default_kwargs)
     
     @staticmethod
     def create_success_button(parent, text, command, **kwargs):
         """Başarı butonu"""
-        return ctk.CTkButton(
-            parent,
-            text=text,
-            command=command,
-            font=ModernTheme.get_font('body'),
-            fg_color=ModernTheme.COLORS['success'],
-            hover_color=ModernTheme.COLORS['success_hover'],
-            corner_radius=ModernTheme.RADIUS['md'],
-            height=40,
-            **kwargs
-        )
+        default_kwargs = {
+            'font': ModernTheme.get_font('body'),
+            'fg_color': ModernTheme.COLORS['success'],
+            'hover_color': ModernTheme.COLORS['success_hover'],
+            'corner_radius': ModernTheme.RADIUS['md'],
+            'height': 40,
+        }
+        default_kwargs.update(kwargs)
+        return ctk.CTkButton(parent, text=text, command=command, **default_kwargs)
     
     @staticmethod
     def create_danger_button(parent, text, command, **kwargs):
         """Tehlike butonu"""
-        return ctk.CTkButton(
-            parent,
-            text=text,
-            command=command,
-            font=ModernTheme.get_font('body'),
-            fg_color=ModernTheme.COLORS['danger'],
-            hover_color=ModernTheme.COLORS['danger_hover'],
-            corner_radius=ModernTheme.RADIUS['md'],
-            height=40,
-            **kwargs
-        )
+        default_kwargs = {
+            'font': ModernTheme.get_font('body'),
+            'fg_color': ModernTheme.COLORS['danger'],
+            'hover_color': ModernTheme.COLORS['danger_hover'],
+            'corner_radius': ModernTheme.RADIUS['md'],
+            'height': 40,
+        }
+        default_kwargs.update(kwargs)
+        return ctk.CTkButton(parent, text=text, command=command, **default_kwargs)
     
     @staticmethod
     def create_warning_button(parent, text, command, **kwargs):
         """Uyarı butonu"""
-        return ctk.CTkButton(
-            parent,
-            text=text,
-            command=command,
-            font=ModernTheme.get_font('body'),
-            fg_color=ModernTheme.COLORS['warning'],
-            hover_color=ModernTheme.COLORS['warning_hover'],
-            corner_radius=ModernTheme.RADIUS['md'],
-            height=40,
-            **kwargs
-        )
+        default_kwargs = {
+            'font': ModernTheme.get_font('body'),
+            'fg_color': ModernTheme.COLORS['warning'],
+            'hover_color': ModernTheme.COLORS['warning_hover'],
+            'corner_radius': ModernTheme.RADIUS['md'],
+            'height': 40,
+        }
+        default_kwargs.update(kwargs)
+        return ctk.CTkButton(parent, text=text, command=command, **default_kwargs)
     
     @staticmethod
     def create_secondary_button(parent, text, command, **kwargs):
         """İkincil buton (outline)"""
-        return ctk.CTkButton(
-            parent,
-            text=text,
-            command=command,
-            font=ModernTheme.get_font('body'),
-            fg_color="transparent",
-            border_width=2,
-            border_color=ModernTheme.COLORS['border_light'],
-            text_color=ModernTheme.COLORS['text_primary'],
-            hover_color=ModernTheme.COLORS['bg_tertiary'],
-            corner_radius=ModernTheme.RADIUS['md'],
-            height=40,
-            **kwargs
-        )
+        default_kwargs = {
+            'font': ModernTheme.get_font('body'),
+            'fg_color': 'transparent',
+            'border_width': 2,
+            'border_color': ModernTheme.COLORS['border_light'],
+            'text_color': ModernTheme.COLORS['text_primary'],
+            'hover_color': ModernTheme.COLORS['bg_tertiary'],
+            'corner_radius': ModernTheme.RADIUS['md'],
+            'height': 40,
+        }
+        default_kwargs.update(kwargs)
+        return ctk.CTkButton(parent, text=text, command=command, **default_kwargs)
     
     @staticmethod
     def create_modern_entry(parent, placeholder="", width=400, **kwargs):
         """Modern input alanı"""
-        return ctk.CTkEntry(
-            parent,
-            placeholder_text=placeholder,
-            width=width,
-            height=40,
-            font=ModernTheme.get_font('body'),
-            corner_radius=ModernTheme.RADIUS['md'],
-            border_width=1,
-            border_color=ModernTheme.COLORS['border'],
-            fg_color=ModernTheme.COLORS['bg_tertiary'],
-            text_color=ModernTheme.COLORS['text_primary'],
-            **kwargs
-        )
+        default_kwargs = {
+            'placeholder_text': placeholder,
+            'width': width,
+            'height': 40,
+            'font': ModernTheme.get_font('body'),
+            'corner_radius': ModernTheme.RADIUS['md'],
+            'border_width': 1,
+            'border_color': ModernTheme.COLORS['border'],
+            'fg_color': ModernTheme.COLORS['bg_tertiary'],
+            'text_color': ModernTheme.COLORS['text_primary'],
+        }
+        default_kwargs.update(kwargs)
+        return ctk.CTkEntry(parent, **default_kwargs)
     
     @staticmethod
     def create_section_title(parent, text):
