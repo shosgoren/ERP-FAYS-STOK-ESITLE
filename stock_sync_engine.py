@@ -76,15 +76,27 @@ class StockSyncEngine:
             df_fays_stocks = self.db.get_fays_stocks_with_raf(warehouse)
             
             if len(df_fays_stocks) > 0:
-                logger.info(f"FAYS'da {len(df_fays_stocks)} adet stok kalemi bulundu, çıkış fişi oluşturulacak")
+                logger.info(f"FAYS'da {len(df_fays_stocks)} adet stok kalemi bulundu")
                 
-                # Tüm FAYS stoklarını çıkış fişi ile 0 yap
-                fis_info = self._create_fays_zero_fisi(
-                    df_fays_stocks,
-                    warehouse,
-                    default_raf_ref_no
-                )
-                created_fis.append(fis_info)
+                # Sadece pozitif stokları al (negatif stoklar sayım eksiği fişine eklenmemeli)
+                df_positive = df_fays_stocks[df_fays_stocks['NetMiktar'] > 0].copy()
+                df_negative = df_fays_stocks[df_fays_stocks['NetMiktar'] < 0].copy()
+                
+                # Pozitif stoklar için çıkış fişi (0 yapmak için çıkış)
+                if len(df_positive) > 0:
+                    logger.info(f"Pozitif stoklar için çıkış fişi oluşturuluyor: {len(df_positive)} kalem")
+                    fis_info = self._create_fays_zero_fisi(
+                        df_positive,
+                        warehouse,
+                        default_raf_ref_no,
+                        is_positive=True  # Çıkış fişi
+                    )
+                    created_fis.append(fis_info)
+                
+                # Negatif stoklar için işlem yapma (sayım eksiği fişine eklenmemeli)
+                # Negatif stoklar zaten eksik, LOGO stoklarına göre giriş yapılırken düzelecek
+                if len(df_negative) > 0:
+                    logger.info(f"Negatif stoklar tespit edildi: {len(df_negative)} kalem - Sayım eksiği fişine eklenmeyecek, LOGO girişi ile düzelecek")
             else:
                 logger.info("FAYS'da stok bulunamadı, 0 yapma işlemi atlandı")
             
@@ -139,14 +151,17 @@ class StockSyncEngine:
                 'created_fis': []
             }
     
-    def _create_fays_zero_fisi(self, df_fays_stocks, warehouse, default_raf_ref_no=None):
+    def _create_fays_zero_fisi(self, df_fays_stocks, warehouse, default_raf_ref_no=None, is_positive=True):
         """
-        FAYS stoklarını 0 yapmak için çıkış fişi oluştur (raf bilgisi dahil)
+        FAYS pozitif stoklarını 0 yapmak için çıkış fişi oluştur (raf bilgisi dahil)
+        
+        NOT: Negatif stoklar bu fişe eklenmez, LOGO girişi ile düzelir.
         
         Args:
-            df_fays_stocks: FAYS özet raporda bulunan stoklar (raf bilgisi dahil)
+            df_fays_stocks: FAYS özet raporda bulunan POZİTİF stoklar (raf bilgisi dahil)
             warehouse: Depo adı
             default_raf_ref_no: Varsayılan raf referans numarası
+            is_positive: True (sadece pozitif stoklar için kullanılır)
             
         Returns:
             dict: Oluşturulan fiş bilgileri
@@ -155,15 +170,18 @@ class StockSyncEngine:
             # Yeni FisNo al
             fisno = self.db.get_next_fisno()
             
-            # Çıkış fişi (FisTuru=51, GirisCikis=2)
-            # Açıklamayı şablonlardan al
+            # Sadece pozitif stoklar için çıkış fişi (FisTuru=51, GirisCikis=2)
+            # Pozitif stokları 0 yapmak için çıkış yapılır
             aciklama = SQLTemplates.get_aciklama(Config.FIS_SAYIM_EKSIGI)
+            fis_turu = Config.FIS_SAYIM_EKSIGI  # 51
+            giris_cikis = 2  # Çıkış
+            fis_turu_adi = 'FAYS Pozitif Stokları Sıfırlama (Çıkış)'
             
             # Ana fiş kaydı oluştur
             fis_idno = self.db.create_fis_record(
                 fisno=fisno,
-                fis_turu=Config.FIS_SAYIM_EKSIGI,  # 51
-                giris_cikis=2,  # Çıkış
+                fis_turu=fis_turu,
+                giris_cikis=giris_cikis,
                 depo=warehouse,
                 aciklama=aciklama
             )
@@ -171,7 +189,9 @@ class StockSyncEngine:
             # Fiş satırlarını oluştur
             lines_created = 0
             for _, row in df_fays_stocks.iterrows():
-                # Mevcut stok miktarını çıkış yap (0 yapmak için)
+                # Mevcut stok miktarını mutlak değer olarak al
+                # Pozitif stoklar için: çıkış yap (0 yapmak için)
+                # Negatif stoklar için: giriş yap (0 yapmak için - eksik stokları tamamla)
                 net_miktar = abs(float(row['NetMiktar']))
                 
                 # RafRefNo'yu al (FAYS özet raporda varsa kullan, yoksa varsayılan)
@@ -225,13 +245,13 @@ class StockSyncEngine:
             fis_info = {
                 'fisno': fisno,
                 'fis_idno': fis_idno,
-                'fis_turu': Config.FIS_SAYIM_EKSIGI,
-                'fis_turu_adi': 'FAYS Stoklarını Sıfırlama (Çıkış)',
+                'fis_turu': fis_turu,
+                'fis_turu_adi': fis_turu_adi,
                 'lines_count': lines_created,
                 'aciklama': aciklama
             }
             
-            logger.info(f"FAYS sıfırlama fişi oluşturuldu - FisNo: {fisno}, Satır: {lines_created}")
+            logger.info(f"FAYS sıfırlama fişi oluşturuldu - FisNo: {fisno}, Tür: {fis_turu_adi}, Satır: {lines_created}")
             return fis_info
             
         except Exception as e:
