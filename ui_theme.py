@@ -102,14 +102,16 @@ class ModernTheme:
     @staticmethod
     def create_card(parent, **kwargs):
         """Modern kart bileşeni oluştur"""
-        return ctk.CTkFrame(
-            parent,
-            corner_radius=ModernTheme.RADIUS['lg'],
-            fg_color=ModernTheme.COLORS['bg_secondary'],
-            border_width=1,
-            border_color=ModernTheme.COLORS['border'],
-            **kwargs
-        )
+        # Varsayılan değerler
+        default_kwargs = {
+            'corner_radius': ModernTheme.RADIUS['lg'],
+            'fg_color': ModernTheme.COLORS['bg_secondary'],
+            'border_width': 1,
+            'border_color': ModernTheme.COLORS['border'],
+        }
+        # kwargs'tan gelen değerler varsayılanları override eder
+        default_kwargs.update(kwargs)
+        return ctk.CTkFrame(parent, **default_kwargs)
     
     @staticmethod
     def create_primary_button(parent, text, command, **kwargs):
