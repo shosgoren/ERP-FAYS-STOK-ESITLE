@@ -135,15 +135,16 @@ class ConnectionFrame(ctk.CTkFrame):
         )
         self.delete_btn.pack(side="left", padx=ModernTheme.SPACING['sm'])
         
-        # Durum mesajı - Modern kart
+        # Durum mesajı - Modern kart (light tema için açık gri)
         self.status_card = ModernTheme.create_card(self)
         self.status_card.pack(fill="x", pady=ModernTheme.SPACING['md'])
+        self.status_card.configure(fg_color='#E5E7EB', border_width=0)  # Light tema - açık gri
         
         self.status_label = ctk.CTkLabel(
             self.status_card,
             text="",
             font=ModernTheme.get_font('body'),
-            text_color=ModernTheme.COLORS['text_secondary']
+            text_color=ModernTheme.COLORS['text_primary']
         )
         self.status_label.pack(padx=ModernTheme.SPACING['lg'], pady=ModernTheme.SPACING['md'])
     
@@ -155,7 +156,7 @@ class ConnectionFrame(ctk.CTkFrame):
                     text="Bağlanıyor...",
                     text_color=ModernTheme.COLORS['loading']
                 )
-                self.status_card.configure(fg_color=ModernTheme.COLORS['bg_tertiary'])
+                self.status_card.configure(fg_color='#E5E7EB')  # Light tema için açık gri
                 self.update()
             
             # Ayarları güncelle
@@ -176,7 +177,7 @@ class ConnectionFrame(ctk.CTkFrame):
                         text="✓ Bağlantı başarılı!",
                         text_color=ModernTheme.COLORS['success']
                     )
-                    self.status_card.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
+                    self.status_card.configure(fg_color='#E5E7EB')  # Light tema
                 self.on_connection_changed(True, db_name)
                 if not silent:
                     messagebox.showinfo("Başarılı", "Veritabanı bağlantısı başarıyla kuruldu!")
@@ -186,7 +187,7 @@ class ConnectionFrame(ctk.CTkFrame):
                         text="✗ Bağlantı başarısız!",
                         text_color=ModernTheme.COLORS['danger']
                     )
-                    self.status_card.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
+                    self.status_card.configure(fg_color='#E5E7EB')  # Light tema
                 self.on_connection_changed(False)
                 if not silent:
                     messagebox.showerror("Hata", "Veritabanına bağlanılamadı!")
@@ -197,7 +198,7 @@ class ConnectionFrame(ctk.CTkFrame):
                     text=f"✗ Hata: {str(e)}",
                     text_color=ModernTheme.COLORS['danger']
                 )
-                self.status_card.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
+                self.status_card.configure(fg_color='#E5E7EB')  # Light tema
             self.on_connection_changed(False)
             if not silent:
                 messagebox.showerror("Hata", f"Bağlantı hatası:\n{str(e)}")
@@ -677,7 +678,7 @@ class SyncFrame(ctk.CTkFrame):
             font=ModernTheme.get_font('code'),
             wrap="word",
             corner_radius=ModernTheme.RADIUS['md'],
-            fg_color=ModernTheme.COLORS['bg_tertiary'],
+            fg_color='#FFFFFF',  # Beyaz arka plan (light tema)
             text_color=ModernTheme.COLORS['text_primary']
         )
         self.result_text.pack(fill="both", expand=True, padx=ModernTheme.SPACING['lg'], pady=(0, ModernTheme.SPACING['lg']))
@@ -1224,25 +1225,29 @@ class SettingsFrame(ctk.CTkFrame):
     """Ayarlar ekranı"""
     
     def __init__(self, parent):
-        super().__init__(parent)
-        self.pack(fill="both", expand=True, padx=20, pady=20)
+        super().__init__(parent, fg_color="transparent")
+        self.pack(fill="both", expand=True, padx=ModernTheme.SPACING['xl'], pady=ModernTheme.SPACING['xl'])
         
         self.create_widgets()
     
     def create_widgets(self):
-        """Widget'ları oluştur"""
+        """Widget'ları oluştur - Modern tasarım"""
         
         # Başlık
         title = ctk.CTkLabel(
             self,
             text="Uygulama Ayarları",
-            font=ctk.CTkFont(size=24, weight="bold")
+            font=ModernTheme.get_font('h2'),
+            text_color=ModernTheme.COLORS['text_primary']
         )
-        title.pack(pady=20)
+        title.pack(pady=(0, ModernTheme.SPACING['lg']))
         
-        # Ayarlar formu
-        form_frame = ctk.CTkFrame(self)
-        form_frame.pack(fill="both", expand=True, padx=50, pady=20)
+        # Ayarlar formu - Modern kart
+        form_card = ModernTheme.create_card(self)
+        form_card.pack(fill="both", expand=True, padx=0, pady=0)
+        
+        form_frame = ctk.CTkFrame(form_card, fg_color="transparent")
+        form_frame.pack(fill="both", expand=True, padx=ModernTheme.SPACING['xl'], pady=ModernTheme.SPACING['xl'])
         
         # Tema
         ctk.CTkLabel(
@@ -1300,9 +1305,9 @@ class SettingsFrame(ctk.CTkFrame):
         )
         save_btn.grid(row=3, column=0, columnspan=2, pady=30)
         
-        # Bilgi paneli
-        info_frame = ctk.CTkFrame(self)
-        info_frame.pack(fill="x", padx=50, pady=20)
+        # Bilgi paneli - Modern kart
+        info_card = ModernTheme.create_card(self)
+        info_card.pack(fill="x", pady=(ModernTheme.SPACING['lg'], 0))
         
         info_text = (
             "📌 LOGO - FAYS WMS Stok Eşitleme Programı\n"
@@ -1313,11 +1318,12 @@ class SettingsFrame(ctk.CTkFrame):
         )
         
         ctk.CTkLabel(
-            info_frame,
+            info_card,
             text=info_text,
-            font=ctk.CTkFont(size=12),
+            font=ModernTheme.get_font('body_small'),
+            text_color=ModernTheme.COLORS['text_primary'],
             justify="left"
-        ).pack(padx=20, pady=20)
+        ).pack(padx=ModernTheme.SPACING['lg'], pady=ModernTheme.SPACING['lg'])
     
     def change_theme(self, choice):
         """Temayı değiştir"""

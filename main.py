@@ -48,6 +48,7 @@ class StockSyncApp(ctk.CTk):
         # Pencere ayarları
         self.title(Config.APP_TITLE)
         self.geometry("1600x1000")
+        # Light tema için arka plan rengi
         self.configure(fg_color=ModernTheme.COLORS['bg_primary'])
         
         # Veritabanı yöneticisi
@@ -66,7 +67,7 @@ class StockSyncApp(ctk.CTk):
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
         
-        # Üst başlık çubuğu - Modern tasarım
+        # Üst başlık çubuğu - Modern tasarım (koyu mavi)
         self.title_frame = ModernTheme.create_card(
             self,
             height=70,
@@ -74,7 +75,10 @@ class StockSyncApp(ctk.CTk):
         )
         self.title_frame.grid(row=0, column=0, sticky="ew", padx=0, pady=0)
         self.title_frame.grid_columnconfigure(0, weight=1)
-        self.title_frame.configure(fg_color=ModernTheme.COLORS['bg_secondary'])
+        self.title_frame.configure(
+            fg_color=ModernTheme.COLORS['header_bg'],
+            border_width=0
+        )
         
         # Sol tarafta logo/başlık
         header_left = ctk.CTkFrame(self.title_frame, fg_color="transparent")
@@ -84,7 +88,7 @@ class StockSyncApp(ctk.CTk):
             header_left,
             text="📦 Stok Eşitleme",
             font=ModernTheme.get_font('h3'),
-            text_color=ModernTheme.COLORS['text_primary']
+            text_color=ModernTheme.COLORS['header_text']
         )
         app_title.pack(side="left", padx=(0, ModernTheme.SPACING['lg']))
         
@@ -105,7 +109,7 @@ class StockSyncApp(ctk.CTk):
             header_right,
             text="Bağlantı Yok",
             font=ModernTheme.get_font('body'),
-            text_color=ModernTheme.COLORS['text_secondary']
+            text_color=ModernTheme.COLORS['header_text']
         )
         self.db_title_label.pack(side="left")
         
@@ -155,7 +159,7 @@ class StockSyncApp(ctk.CTk):
             db_display = db_name if db_name else "Bağlı"
             self.db_title_label.configure(
                 text=f"{db_display}",
-                text_color=ModernTheme.COLORS['text_primary']
+                text_color=ModernTheme.COLORS['header_text']
             )
             self.status_indicator.configure(fg_color=ModernTheme.COLORS['connected'])
             logger.info(f"Veritabanı bağlantısı başarılı: {db_display}")
@@ -169,7 +173,7 @@ class StockSyncApp(ctk.CTk):
         else:
             self.db_title_label.configure(
                 text="Bağlantı Yok",
-                text_color=ModernTheme.COLORS['text_secondary']
+                text_color=ModernTheme.COLORS['header_text']
             )
             self.status_indicator.configure(fg_color=ModernTheme.COLORS['disconnected'])
             logger.warning("Veritabanı bağlantısı kesildi")

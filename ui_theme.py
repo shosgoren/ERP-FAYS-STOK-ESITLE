@@ -21,15 +21,19 @@ class ModernTheme:
         'success': '#10B981',        # Yeşil
         'success_hover': '#059669',
         
-        # Nötr Renkler
-        'bg_primary': '#0F172A',    # Çok koyu mavi-gri (arka plan)
-        'bg_secondary': '#1E293B',   # Koyu mavi-gri (kartlar)
-        'bg_tertiary': '#334155',   # Orta gri
-        'text_primary': '#F1F5F9',   # Açık gri (ana metin)
-        'text_secondary': '#94A3B8', # Orta gri (ikincil metin)
-        'text_muted': '#64748B',    # Koyu gri (soluk metin)
-        'border': '#334155',        # Kenarlık
-        'border_light': '#475569',
+        # Nötr Renkler - Light Tema için
+        'bg_primary': '#F5F5F5',    # Açık gri (ana arka plan)
+        'bg_secondary': '#FFFFFF',   # Beyaz (kartlar)
+        'bg_tertiary': '#E5E5E5',   # Açık gri (input alanları)
+        'text_primary': '#1F2937',   # Koyu gri/siyah (ana metin)
+        'text_secondary': '#6B7280', # Orta gri (ikincil metin)
+        'text_muted': '#9CA3AF',    # Açık gri (soluk metin)
+        'border': '#D1D5DB',        # Açık gri kenarlık
+        'border_light': '#E5E7EB',
+        
+        # Header/Footer için koyu mavi (görseldeki gibi)
+        'header_bg': '#1E3A8A',     # Koyu mavi (üst/alt çubuk)
+        'header_text': '#FFFFFF',    # Beyaz (header metin)
         
         # Özel Durumlar
         'connected': '#10B981',     # Bağlı durumu
@@ -95,14 +99,14 @@ class ModernTheme:
     @staticmethod
     def apply_theme():
         """Temayı uygula"""
-        ctk.set_appearance_mode("dark")
+        ctk.set_appearance_mode("light")
         # Özel renk teması (blue yerine custom)
         ctk.set_default_color_theme("blue")  # CustomTkinter'ın kendi teması
     
     @staticmethod
     def create_card(parent, **kwargs):
         """Modern kart bileşeni oluştur"""
-        # Varsayılan değerler
+        # Varsayılan değerler - Light tema için
         default_kwargs = {
             'corner_radius': ModernTheme.RADIUS['lg'],
             'fg_color': ModernTheme.COLORS['bg_secondary'],
@@ -183,7 +187,7 @@ class ModernTheme:
     
     @staticmethod
     def create_modern_entry(parent, placeholder="", width=400, **kwargs):
-        """Modern input alanı"""
+        """Modern input alanı - Light tema için beyaz arka plan"""
         default_kwargs = {
             'placeholder_text': placeholder,
             'width': width,
@@ -192,7 +196,7 @@ class ModernTheme:
             'corner_radius': ModernTheme.RADIUS['md'],
             'border_width': 1,
             'border_color': ModernTheme.COLORS['border'],
-            'fg_color': ModernTheme.COLORS['bg_tertiary'],
+            'fg_color': '#FFFFFF',  # Beyaz arka plan (light tema)
             'text_color': ModernTheme.COLORS['text_primary'],
         }
         default_kwargs.update(kwargs)
