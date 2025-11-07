@@ -75,12 +75,16 @@ def create_app_icon():
         
         images.append(img)
     
-    # ICO dosyası olarak kaydet - en büyük boyutu kullan (Windows otomatik ölçekler)
+    # ICO dosyası olarak kaydet - Windows ve PyInstaller için optimize edilmiş
     if images:
-        # En büyük boyutu (256x256) ICO olarak kaydet
-        # Windows bu boyutu otomatik olarak diğer boyutlara ölçekler
+        # Windows için önemli boyutlar: 16, 32, 48, 256
+        # PyInstaller ve Windows Explorer için en iyi sonuç için 256x256 yeterli
+        # Windows otomatik olarak diğer boyutlara ölçekler
+        # En büyük ve en kaliteli görüntüyü (256x256) ICO olarak kaydet
         images[-1].save('app_icon.ico', format='ICO')
-        print("✓ app_icon.ico oluşturuldu! (256x256)")
+        print("✓ app_icon.ico oluşturuldu! (256x256 - Windows otomatik ölçekler)")
+        print("  → PyInstaller bu icon'u EXE dosyasına ekleyecek")
+        print("  → Windows Explorer ve görev çubuğunda görünecek")
         
         # PNG olarak da kaydet (önizleme için)
         images[-1].save('app_icon.png', format='PNG')
