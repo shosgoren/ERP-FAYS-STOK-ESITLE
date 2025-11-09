@@ -755,29 +755,21 @@ class SyncFrame(ctk.CTkFrame):
         result_card = ModernTheme.create_card(self)
         result_card.pack(fill="both", expand=True, pady=(ModernTheme.SPACING['lg'], 0))
         
-        # Result card içinde grid kullanarak düzen oluştur
-        result_card.grid_columnconfigure(0, weight=1)
-        result_card.grid_rowconfigure(1, weight=1)
-        
+        # Başlık
         result_label = ModernTheme.create_section_title(result_card, "İşlem Sonuçları")
-        result_label.grid(row=0, column=0, sticky="w", padx=ModernTheme.SPACING['lg'], pady=(ModernTheme.SPACING['lg'], ModernTheme.SPACING['sm']))
+        result_label.pack(anchor="w", padx=ModernTheme.SPACING['lg'], pady=(ModernTheme.SPACING['lg'], ModernTheme.SPACING['sm']))
         
-        # Textbox için container frame (expand için)
-        textbox_container = ctk.CTkFrame(result_card, fg_color="transparent")
-        textbox_container.grid(row=1, column=0, sticky="nsew", padx=ModernTheme.SPACING['lg'], pady=(0, ModernTheme.SPACING['lg']))
-        textbox_container.grid_columnconfigure(0, weight=1)
-        textbox_container.grid_rowconfigure(0, weight=1)
-        
+        # Textbox - doğrudan result_card içinde, expand ile
         self.result_text = ctk.CTkTextbox(
-            textbox_container,
+            result_card,
             font=ModernTheme.get_font('code'),
             wrap="word",
             corner_radius=ModernTheme.RADIUS['md'],
             fg_color='#FFFFFF',  # Beyaz arka plan (light tema)
             text_color=ModernTheme.COLORS['text_primary']
-            # height parametresi kaldırıldı - expand=True ile tam ekranı kullanacak
+            # height parametresi yok - expand=True ile tam ekranı kullanacak
         )
-        self.result_text.grid(row=0, column=0, sticky="nsew")
+        self.result_text.pack(fill="both", expand=True, padx=ModernTheme.SPACING['lg'], pady=(0, ModernTheme.SPACING['lg']))
         
         self.result_text.insert("1.0", "Eşitleme işlemi henüz başlatılmadı.\n\n"
                                       "İşlem Adımları:\n"
