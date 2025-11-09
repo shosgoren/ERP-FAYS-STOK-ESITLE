@@ -188,19 +188,21 @@ class StockSyncEngine:
             fisno = self.db.get_next_fisno()
             
             if is_positive:
-                # Pozitif stoklar için çıkış fişi (Sayım Fazlası - Çıkış)
+                # Pozitif stoklar için çıkış fişi (Sayım Eksiği - Çıkış)
                 # Pozitif stokları 0 yapmak için çıkış yapılır
-                aciklama = SQLTemplates.get_aciklama(Config.FIS_SAYIM_FAZLASI)
-                fis_turu = Config.FIS_SAYIM_FAZLASI  # 50
-                giris_cikis = 2  # Çıkış
-                fis_turu_adi = 'FAYS Pozitif Stokları Sıfırlama (Sayım Fazlası - Çıkış)'
-            else:
-                # Negatif stoklar için giriş fişi (Sayım Eksiği - Giriş)
-                # Negatif stokları 0 yapmak için giriş yapılır (eksik stokları tamamla)
+                # Sayım Eksiği: FisTuru=51, GirisCikis=2 (Çıkış)
                 aciklama = SQLTemplates.get_aciklama(Config.FIS_SAYIM_EKSIGI)
                 fis_turu = Config.FIS_SAYIM_EKSIGI  # 51
+                giris_cikis = 2  # Çıkış
+                fis_turu_adi = 'FAYS Pozitif Stokları Sıfırlama (Sayım Eksiği - Çıkış)'
+            else:
+                # Negatif stoklar için giriş fişi (Sayım Fazlası - Giriş)
+                # Negatif stokları 0 yapmak için giriş yapılır (eksik stokları tamamla)
+                # Sayım Fazlası: FisTuru=50, GirisCikis=1 (Giriş)
+                aciklama = SQLTemplates.get_aciklama(Config.FIS_SAYIM_FAZLASI)
+                fis_turu = Config.FIS_SAYIM_FAZLASI  # 50
                 giris_cikis = 1  # Giriş
-                fis_turu_adi = 'FAYS Negatif Stokları Sıfırlama (Sayım Eksiği - Giriş)'
+                fis_turu_adi = 'FAYS Negatif Stokları Sıfırlama (Sayım Fazlası - Giriş)'
             
             # Ana fiş kaydı oluştur
             fis_idno = self.db.create_fis_record(
