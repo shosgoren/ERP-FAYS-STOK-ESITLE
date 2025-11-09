@@ -119,25 +119,26 @@ class StockSyncEngine:
             # ADIM 2: LOGO stoklarına göre giriş fişi oluştur
             logger.info("ADIM 2: LOGO stoklarına göre giriş fişi oluşturuluyor...")
             
-            # ADIM 1'den sonra pozitif stoklar 0 oldu, negatif stoklar olduğu gibi kaldı
+            # ADIM 1'de FAYS stokları zaten 0'a eşitlendi (hem pozitif hem negatif)
+            # Bu yüzden sadece LOGO stok miktarını giriş olarak eklemek yeterli
+            # Örnek: LOGO=45, ADIM 1 sonrası FAYS=0 → Gerekli giriş = 45
             # Karşılaştırma yapılmamışsa yap (sadece bilgi amaçlı)
             if df_comparison is None:
                 df_comparison = self.compare_stocks(warehouse)
             
-            # ÖNEMLİ: LOGO'dan stokları al ve ADIM 1 öncesi FAYS stoklarını hesaba kat
-            # Gerekli giriş miktarı = LOGO stok - (ADIM 1 öncesi FAYS stok)
-            # Örnek: LOGO=2, FAYS=-1 ise → Gerekli giriş = 2 - (-1) = 3
+            # LOGO'dan stokları al
             df_logo_stocks = self.db.get_logo_stocks(warehouse)
             
             if len(df_logo_stocks) > 0:
                 logger.info(f"LOGO'da {len(df_logo_stocks)} adet stok kalemi bulundu, giriş fişi oluşturulacak")
                 
-                # LOGO stoklarına göre giriş fişi oluştur (ADIM 1 öncesi FAYS stoklarını hesaba katarak)
+                # LOGO stoklarına göre giriş fişi oluştur
+                # ADIM 1'de FAYS stokları 0'a eşitlendiği için, sadece LOGO stok miktarını eklemek yeterli
                 fis_info = self._create_logo_entry_fisi(
                     df_logo_stocks,
                     warehouse,
                     default_raf_ref_no,
-                    fays_stocks_before  # ADIM 1 öncesi FAYS stokları
+                    fays_stocks_before  # Artık kullanılmıyor ama geriye dönük uyumluluk için tutuluyor
                 )
                 created_fis.append(fis_info)
             else:
@@ -289,15 +290,15 @@ class StockSyncEngine:
         """
         LOGO stoklarına göre giriş fişi oluştur
         
-        ÖNEMLİ: ADIM 1 öncesi FAYS stoklarını hesaba katarak gerekli giriş miktarını hesaplar
-        Gerekli giriş = LOGO stok - (ADIM 1 öncesi FAYS stok)
-        Örnek: LOGO=2, FAYS=-1 ise → Gerekli giriş = 2 - (-1) = 3
+        ÖNEMLİ: ADIM 1'de FAYS stokları zaten 0'a eşitlendi
+        Bu yüzden sadece LOGO stok miktarını giriş olarak eklemek yeterli
+        Örnek: LOGO=45, ADIM 1 sonrası FAYS=0 → Gerekli giriş = 45
         
         Args:
             df_logo_stocks: LOGO'da bulunan stoklar
             warehouse: Depo adı
             default_raf_ref_no: Varsayılan raf referans numarası
-            fays_stocks_before: ADIM 1 öncesi FAYS stokları (stok_kodu -> net_miktar dict)
+            fays_stocks_before: ADIM 1 öncesi FAYS stokları (artık kullanılmıyor, geriye dönük uyumluluk için tutuluyor)
             
         Returns:
             dict: Oluşturulan fiş bilgileri
@@ -331,20 +332,18 @@ class StockSyncEngine:
                 stok_kodu = row['MALZEME KODU']
                 logo_stok = float(row['LOGO FİİLİ STOK'])
                 
-                # ADIM 1 öncesi FAYS stokunu al (yoksa 0 kabul et)
-                fays_stok_before = fays_stocks_before.get(stok_kodu, 0.0) if fays_stocks_before else 0.0
-                
-                # Gerekli giriş miktarı = LOGO stok - (ADIM 1 öncesi FAYS stok)
-                # Örnek: LOGO=2, FAYS=-1 ise → Gerekli giriş = 2 - (-1) = 3
-                # Örnek: LOGO=2, FAYS=0 ise → Gerekli giriş = 2 - 0 = 2
-                net_miktar = logo_stok - fays_stok_before
+                # ÖNEMLİ: ADIM 1'de FAYS stokları zaten 0'a eşitlendi
+                # Bu yüzden sadece LOGO stok miktarını giriş olarak eklemek yeterli
+                # Örnek: LOGO=45, ADIM 1 sonrası FAYS=0 → Gerekli giriş = 45
+                # Örnek: LOGO=2, ADIM 1 sonrası FAYS=0 → Gerekli giriş = 2
+                net_miktar = logo_stok
                 
                 # Negatif miktar olamaz (güvenlik kontrolü)
                 if net_miktar <= 0:
-                    logger.warning(f"Stok {stok_kodu} için gerekli giriş miktarı <= 0 (LOGO={logo_stok}, FAYS={fays_stok_before}), atlanıyor")
+                    logger.warning(f"Stok {stok_kodu} için LOGO stok <= 0 (LOGO={logo_stok}), atlanıyor")
                     continue
                 
-                logger.debug(f"Stok {stok_kodu}: LOGO={logo_stok}, FAYS(öncesi)={fays_stok_before}, Gerekli giriş={net_miktar}")
+                logger.debug(f"Stok {stok_kodu}: LOGO={logo_stok}, ADIM 1 sonrası FAYS=0, Gerekli giriş={net_miktar}")
                 
                 # StokRefNo'yu LOGO'dan al
                 stok_ref_no = self._get_stok_ref_no(row['MALZEME KODU'])
