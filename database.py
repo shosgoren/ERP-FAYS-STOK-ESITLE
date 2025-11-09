@@ -301,6 +301,14 @@ class DatabaseManager:
                     logger.warning(f"BarkodNo alınamadı - StokRefNo yok: {stok_kodu}")
                     barkod_no = ''
             
+            # MiktarBirimi'ni stk_Kart tablosundan otomatik al
+            miktar_birimi = 'ADET'  # Varsayılan
+            if stok_ref_no:
+                miktar_birimi = self.get_miktar_birimi(stok_ref_no)
+                logger.debug(f"MiktarBirimi alındı - StokKodu: {stok_kodu}, StokRefNo: {stok_ref_no}, MiktarBirimi: {miktar_birimi}")
+            else:
+                logger.warning(f"MiktarBirimi alınamadı - StokRefNo yok: {stok_kodu}, varsayılan 'ADET' kullanılıyor")
+            
             query = """
             INSERT INTO stk_FisLines (
                 Link_FisNo, StokKodu, BarkodNo, NetMiktar, BrutMiktar, BirimFiyat,
@@ -312,7 +320,7 @@ class DatabaseManager:
                 IslemTipi, TransLinesIdno, GUIDX, KULLANICI
             ) VALUES (
                 ?, ?, ?, ?, 0, 0.00,
-                ?, ?, ?, 'ADET', 0, 0, 0,
+                ?, ?, ?, ?, 0, 0, 0,
                 0, 0, 0, 0, 0, 0.00,
                 0, 0, 0, 0, 0, 0, 1,
                 0.00, 0, 0, 0, 1,
@@ -323,7 +331,7 @@ class DatabaseManager:
             
             params = (
                 link_fisno, stok_kodu, barkod_no, net_miktar,
-                depo, urun_grup1, raf_adi or '', stok_ref_no, depo_ref_no, raf_ref_no, guidx
+                depo, urun_grup1, raf_adi or '', miktar_birimi, stok_ref_no, depo_ref_no, raf_ref_no, guidx
             )
             
             cursor = self.conn_fays.cursor()
@@ -624,6 +632,34 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"BarkodNo alma hatası: {e}")
             return ''
+    
+    def get_miktar_birimi(self, stok_ref_no):
+        """stk_Kart tablosundan MiktarBirimi al (StokRefNo ile)"""
+        try:
+            if stok_ref_no is None:
+                return 'ADET'  # Varsayılan birim
+            
+            query = """
+            SELECT MiktarBirimi 
+            FROM stk_Kart 
+            WHERE idNo = ?
+            """
+            
+            cursor = self.conn_fays.cursor()
+            cursor.execute(query, (stok_ref_no,))
+            row = cursor.fetchone()
+            cursor.close()
+            
+            if row and row[0]:
+                miktar_birimi = str(row[0]).strip()
+                logger.info(f"MiktarBirimi bulundu - StokRefNo: {stok_ref_no}, MiktarBirimi: {miktar_birimi}")
+                return miktar_birimi
+            else:
+                logger.warning(f"MiktarBirimi bulunamadı - StokRefNo: {stok_ref_no}, varsayılan 'ADET' kullanılıyor")
+                return 'ADET'  # Bulunamazsa varsayılan birim
+        except Exception as e:
+            logger.error(f"MiktarBirimi alma hatası: {e}")
+            return 'ADET'  # Hata durumunda varsayılan birim
     
     def get_logo_stocks(self, depo_adi):
         """LOGO'dan doğrudan stokları al (pozitif stoklar)"""
